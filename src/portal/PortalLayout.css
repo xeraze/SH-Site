@@ -22,6 +22,12 @@
   margin-right: auto;
 }
 
+.portal-header__emblem {
+  width: 36px;
+  height: 36px;
+  display: block;
+}
+
 .portal-header__brand div {
   display: flex;
   flex-direction: column;

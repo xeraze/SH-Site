@@ -1,6 +1,5 @@
 import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
-import { Emblem } from "../components/Emblem";
 import { useAuth } from "./AuthContext";
 import "./LoginPage.css";
 
@@ -54,7 +53,7 @@ export function LoginPage() {
     <div className="login-page">
       <div className="login-card">
         <div className="login-card__header">
-          <Emblem size={64} animated={false} />
+          <img src="/SH-Site/emblem.png" alt="Герб" className="login-card__emblem" />
           <div>
             <span className="eyebrow">Портал для лікарів</span>
             <h1>Вхід до системи</h1>

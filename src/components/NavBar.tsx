@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { Link, NavLink } from "react-router-dom";
-import { Emblem } from "./Emblem";
 import "./NavBar.css";
 
 const NAV_LINKS = [
@@ -24,7 +23,7 @@ export function NavBar() {
     <header className={`navbar${scrolled ? " navbar--scrolled" : ""}`}>
       <div className="container navbar__inner">
         <Link to="/" className="navbar__brand">
-          <Emblem size={40} animated={false} />
+          <img src="/SH-Site/emblem.png" alt="Герб" className="navbar__emblem" />
           <span className="navbar__brand-text">
             <strong>Слобідська ЦРЛ</strong>
             <span>Довідковий центр</span>

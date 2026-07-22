@@ -1,6 +1,5 @@
 import type { ReactElement } from "react";
 import { Link } from "react-router-dom";
-import { Emblem } from "../components/Emblem";
 import { departments, roleHierarchy } from "../data/hierarchy";
 import "./HomePage.css";
 
@@ -100,7 +99,7 @@ export function HomePage() {
             <span className="hero__stamp" aria-hidden="true">
               офіційний документ
             </span>
-            <Emblem size={210} />
+            <img src="/SH-Site/emblem.png" alt="Герб" className="hero__emblem" />
             <div className="hero__id-card">
               <span className="hero__id-card__row">
                 <span>Тип закладу</span>

@@ -1,5 +1,4 @@
 import { NavLink, Outlet } from "react-router-dom";
-import { Emblem } from "../components/Emblem";
 import { useAuth } from "./AuthContext";
 import "./PortalLayout.css";
 
@@ -10,7 +9,7 @@ export function PortalLayout() {
     <div className="portal-layout">
       <header className="portal-header">
         <div className="portal-header__brand">
-          <Emblem size={36} animated={false} />
+          <img src="/SH-Site/emblem.png" alt="Герб" className="portal-header__emblem" />
           <div>
             <strong>Портал для лікарів</strong>
             <span>КНП «Слобідська ЦРЛ» СМР</span>
