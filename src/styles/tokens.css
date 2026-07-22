@@ -1,0 +1,47 @@
+:root {
+  /* Колірна палітра — клінічна, стримана, з холодним підтоном */
+  --color-bg: #F7FAFB;
+  --color-bg-raised: #FFFFFF;
+  --color-bg-muted: #EEF4F5;
+  --color-ink: #17242E;
+  --color-ink-soft: #4A5A63;
+  --color-navy: #0E3A53;
+  --color-navy-deep: #0A2A3D;
+  --color-teal: #2E8B8B;
+  --color-teal-soft: #4FA9A0;
+  --color-teal-tint: #E4F3F1;
+  --color-amber: #C97A3D;
+  --color-rose: #8B2E4E;
+  --color-line: #D7E3E5;
+  --color-line-strong: #B7C9CC;
+
+  --color-status-vacant: #2E8B6B;
+  --color-status-occupied: #8B3E3E;
+  --color-status-limited: #C98B3D;
+
+  /* Типографіка */
+  --font-display: "Fraunces", "Source Serif Pro", serif;
+  --font-body: "Manrope", -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", "SF Mono", monospace;
+
+  /* Розміри */
+  --radius-sm: 6px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+  --container-max: 1180px;
+  --space-section: clamp(4rem, 8vw, 7rem);
+
+  --shadow-card: 0 1px 2px rgba(14, 58, 83, 0.06), 0 8px 24px -8px rgba(14, 58, 83, 0.12);
+  --shadow-card-hover: 0 2px 6px rgba(14, 58, 83, 0.1), 0 16px 40px -12px rgba(14, 58, 83, 0.18);
+
+  --ease-standard: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

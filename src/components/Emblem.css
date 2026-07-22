@@ -1,0 +1,30 @@
+.emblem {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.emblem svg {
+  width: 100%;
+  height: 100%;
+}
+
+.emblem--animated .emblem__staff {
+  animation: emblem-pulse 4.5s var(--ease-standard) infinite;
+  transform-origin: 100px 108px;
+}
+
+@keyframes emblem-pulse {
+  0%, 100% {
+    opacity: 0.92;
+  }
+  50% {
+    opacity: 1;
+    filter: drop-shadow(0 0 3px rgba(255, 255, 255, 0.35));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .emblem--animated .emblem__staff {
+    animation: none;
+  }
+}

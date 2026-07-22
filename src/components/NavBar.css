@@ -1,0 +1,117 @@
+.navbar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(247, 250, 251, 0.82);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-bottom: 1px solid transparent;
+  transition: border-color 0.3s var(--ease-standard), box-shadow 0.3s var(--ease-standard);
+}
+
+.navbar--scrolled {
+  border-bottom-color: var(--color-line);
+  box-shadow: 0 4px 24px -12px rgba(14, 58, 83, 0.12);
+}
+
+.navbar__inner {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  padding-block: 0.9rem;
+}
+
+.navbar__brand {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  margin-right: auto;
+}
+
+.navbar__brand-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+}
+
+.navbar__brand-text strong {
+  font-family: var(--font-display);
+  font-size: 1.02rem;
+  color: var(--color-navy-deep);
+}
+
+.navbar__brand-text span {
+  font-size: 0.72rem;
+  color: var(--color-ink-soft);
+  font-family: var(--font-mono);
+  letter-spacing: 0.02em;
+}
+
+.navbar__links {
+  display: flex;
+  align-items: center;
+  gap: 1.75rem;
+}
+
+.navbar__link {
+  position: relative;
+  font-size: 0.92rem;
+  font-weight: 500;
+  color: var(--color-ink-soft);
+  padding-block: 0.4rem;
+  transition: color 0.2s var(--ease-standard);
+}
+
+.navbar__link::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  background: var(--color-teal);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.25s var(--ease-standard);
+}
+
+.navbar__link:hover {
+  color: var(--color-navy-deep);
+}
+
+.navbar__link:hover::after {
+  transform: scaleX(1);
+}
+
+.navbar__link--active {
+  color: var(--color-navy-deep);
+}
+
+.navbar__link--active::after {
+  transform: scaleX(1);
+}
+
+.navbar__portal-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--color-navy);
+  color: var(--color-bg-raised);
+  font-size: 0.86rem;
+  font-weight: 600;
+  padding: 0.62rem 1.15rem;
+  border-radius: var(--radius-sm);
+  transition: background 0.2s var(--ease-standard), transform 0.2s var(--ease-standard);
+  white-space: nowrap;
+}
+
+.navbar__portal-btn:hover {
+  background: var(--color-navy-deep);
+  transform: translateY(-1px);
+}
+
+@media (max-width: 860px) {
+  .navbar__links {
+    display: none;
+  }
+}

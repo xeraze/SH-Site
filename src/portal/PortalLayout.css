@@ -1,0 +1,115 @@
+.portal-layout {
+  min-height: 100vh;
+  background: var(--color-bg);
+}
+
+.portal-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  padding: 0.9rem clamp(1.25rem, 4vw, 2.5rem);
+  background: var(--color-navy-deep);
+  color: #fff;
+}
+
+.portal-header__brand {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  margin-right: auto;
+}
+
+.portal-header__brand div {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+}
+
+.portal-header__brand strong {
+  font-family: var(--font-display);
+  font-size: 0.98rem;
+}
+
+.portal-header__brand span {
+  font-size: 0.7rem;
+  color: rgba(247, 250, 251, 0.55);
+  font-family: var(--font-mono);
+}
+
+.portal-nav {
+  display: flex;
+  gap: 1.6rem;
+}
+
+.portal-nav__link {
+  font-size: 0.88rem;
+  color: rgba(247, 250, 251, 0.65);
+  padding-block: 0.4rem;
+  position: relative;
+  transition: color 0.2s var(--ease-standard);
+}
+
+.portal-nav__link::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -2px;
+  height: 2px;
+  background: var(--color-teal-soft);
+  transform: scaleX(0);
+  transition: transform 0.25s var(--ease-standard);
+}
+
+.portal-nav__link:hover {
+  color: #fff;
+}
+
+.portal-nav__link--active {
+  color: #fff;
+}
+
+.portal-nav__link--active::after {
+  transform: scaleX(1);
+}
+
+.portal-header__user {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.portal-header__name {
+  font-size: 0.84rem;
+  color: rgba(247, 250, 251, 0.8);
+  font-family: var(--font-mono);
+}
+
+.portal-header__logout {
+  background: rgba(247, 250, 251, 0.1);
+  color: #fff;
+  border: 1px solid rgba(247, 250, 251, 0.2);
+  border-radius: var(--radius-sm);
+  padding: 0.45rem 0.9rem;
+  font-size: 0.82rem;
+  transition: background 0.2s var(--ease-standard);
+}
+
+.portal-header__logout:hover {
+  background: rgba(247, 250, 251, 0.18);
+}
+
+.portal-main {
+  padding: 2.5rem clamp(1.25rem, 4vw, 2.5rem) 4rem;
+  max-width: 1180px;
+  margin: 0 auto;
+}
+
+@media (max-width: 800px) {
+  .portal-nav {
+    display: none;
+  }
+}

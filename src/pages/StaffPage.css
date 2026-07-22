@@ -1,0 +1,144 @@
+.staff-ladder {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 3rem;
+}
+
+.staff-level {
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-raised);
+  overflow: hidden;
+  transition: border-color 0.25s var(--ease-standard);
+}
+
+.staff-level__header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 1.1rem;
+  padding: 1.1rem 1.4rem;
+  background: transparent;
+  border: none;
+  text-align: left;
+  position: relative;
+}
+
+.staff-level__header::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--level-accent, var(--color-teal));
+  transform: scaleY(0.3);
+  transition: transform 0.25s var(--ease-standard);
+}
+
+.staff-level__header--open::before {
+  transform: scaleY(1);
+}
+
+.staff-level__rank {
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  color: var(--level-accent, var(--color-teal));
+  font-weight: 600;
+  width: 28px;
+}
+
+.staff-level__label {
+  font-family: var(--font-display);
+  font-size: 1.12rem;
+  color: var(--color-navy-deep);
+  flex: 1;
+}
+
+.staff-level__count {
+  font-size: 0.8rem;
+  color: var(--color-ink-soft);
+  font-family: var(--font-mono);
+}
+
+.staff-level__chevron {
+  width: 16px;
+  height: 16px;
+  color: var(--color-ink-soft);
+  transition: transform 0.28s var(--ease-standard);
+  flex-shrink: 0;
+}
+
+.staff-level__header--open .staff-level__chevron {
+  transform: rotate(180deg);
+}
+
+.staff-level__body {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.32s var(--ease-standard);
+}
+
+.staff-level__body--open {
+  grid-template-rows: 1fr;
+}
+
+.staff-level__roles {
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.9rem;
+  padding: 0 1.4rem 1.4rem;
+}
+
+.role-chip {
+  background: var(--color-bg-muted);
+  border-radius: var(--radius-sm);
+  padding: 1rem 1.15rem;
+}
+
+.role-chip h3 {
+  font-size: 0.95rem;
+  margin-bottom: 0.4rem;
+  color: var(--color-navy-deep);
+}
+
+.role-chip p {
+  font-size: 0.84rem;
+  color: var(--color-ink-soft);
+  line-height: 1.55;
+}
+
+.staff-cta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2rem;
+  background: var(--color-navy);
+  border-radius: var(--radius-lg);
+  padding: 2.25rem 2.5rem;
+  flex-wrap: wrap;
+}
+
+.staff-cta h2 {
+  color: #fff;
+  font-size: 1.3rem;
+  margin-bottom: 0.6rem;
+}
+
+.staff-cta p {
+  color: rgba(247, 250, 251, 0.72);
+  max-width: 46ch;
+  font-size: 0.92rem;
+  line-height: 1.6;
+}
+
+@media (max-width: 700px) {
+  .staff-level__roles {
+    grid-template-columns: 1fr;
+  }
+  .staff-level__count {
+    display: none;
+  }
+}
