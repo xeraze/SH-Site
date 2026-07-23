@@ -95,15 +95,31 @@ img, svg {
 .stamp {
   display: inline-flex;
   align-items: center;
+  gap: 0.6em;
   font-family: var(--font-mono);
   font-size: 0.68rem;
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: var(--color-teal);
+  color: var(--color-navy);
+  background: var(--color-teal-tint);
   border: 1px solid var(--color-teal);
   border-radius: 999px;
   padding: 0.3rem 0.9rem;
-  transform: rotate(-2deg);
-  opacity: 0.85;
   width: fit-content;
+}
+
+.stamp__part {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6em;
+}
+
+.stamp__part + .stamp__part::before {
+  content: "";
+  display: inline-block;
+  width: 1px;
+  height: 0.7em;
+  background: var(--color-teal);
+  opacity: 0.5;
+  margin-right: 0.6em;
 }

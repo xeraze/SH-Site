@@ -10,6 +10,25 @@
   padding: 2rem;
 }
 
+.login-page__inner {
+  width: 100%;
+  max-width: 440px;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.login-page__back {
+  color: rgba(247, 250, 251, 0.72);
+  font-size: 0.86rem;
+  align-self: flex-start;
+  transition: color 0.2s var(--ease-standard);
+}
+
+.login-page__back:hover {
+  color: #fff;
+}
+
 .login-card {
   width: 100%;
   max-width: 440px;

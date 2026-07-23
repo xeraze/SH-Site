@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { roleHierarchy } from "../data/hierarchy";
 import { Stamp } from "../components/Stamp";
+import { pluralizePosady } from "../utils/pluralize";
 import "./StaffPage.css";
 
 export function StaffPage() {
@@ -82,12 +83,4 @@ export function StaffPage() {
       </section>
     </>
   );
-}
-
-function pluralizePosady(n: number): string {
-  const mod10 = n % 10;
-  const mod100 = n % 100;
-  if (mod10 === 1 && mod100 !== 11) return "посада";
-  if ([2, 3, 4].includes(mod10) && ![12, 13, 14].includes(mod100)) return "посади";
-  return "посад";
 }

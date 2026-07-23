@@ -31,8 +31,7 @@ export function HierarchyPage() {
     <div className="hierarchy-page">
       <div className="hierarchy-page__head">
         <div>
-          <Stamp>Внутрішній доступ</Stamp>
-          <span className="eyebrow">Внутрішній розділ</span>
+          <Stamp>Внутрішній доступ · Внутрішній розділ</Stamp>
           <h1>Ієрархія посад</h1>
           <p>
             Актуальний статус кожної посади. Натисніть на посаду, щоб

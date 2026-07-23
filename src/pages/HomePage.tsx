@@ -96,9 +96,6 @@ export function HomePage() {
           </div>
 
           <div className="hero__emblem-wrap">
-            <span className="hero__stamp" aria-hidden="true">
-              офіційний документ
-            </span>
             <img src="/SH-Site/emblem.png" alt="Герб" className="hero__emblem" />
             <div className="hero__id-card">
               <span className="hero__id-card__row">

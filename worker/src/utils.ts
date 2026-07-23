@@ -3,7 +3,7 @@ import type { Env } from "./types";
 export function generateCode(): string {
   const array = new Uint32Array(1);
   crypto.getRandomValues(array);
-  const code = (array[0] % 1_000_000).toString().padStart(6, "0");
+  const code = (array[0] % 100_000_000).toString().padStart(8, "0");
   return code;
 }
 

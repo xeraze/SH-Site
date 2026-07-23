@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "./AuthContext";
 import "./LoginPage.css";
 
@@ -51,7 +51,11 @@ export function LoginPage() {
 
   return (
     <div className="login-page">
-      <div className="login-card">
+      <div className="login-page__inner">
+        <Link to="/" className="login-page__back">
+          ← До довідкового центру
+        </Link>
+        <div className="login-card">
         <div className="login-card__header">
           <img src="/SH-Site/emblem.png" alt="Герб" className="login-card__emblem" />
           <div>
@@ -88,7 +92,7 @@ export function LoginPage() {
         {step === "code" && (
           <form onSubmit={handleVerifyCode} className="login-form">
             <p className="login-form__hint">
-              Код надіслано в канал <strong>#вхід-у-систему</strong> на
+              Код надіслано в канал <strong>#sh-site-codes</strong> на
               Discord-сервері лікарні. Введіть його нижче — код дійсний
               протягом 5 хвилин.
             </p>
@@ -97,11 +101,12 @@ export function LoginPage() {
               <input
                 type="text"
                 inputMode="numeric"
-                placeholder="000000"
+                placeholder="00000000"
                 value={code}
-                onChange={(e) => setCode(e.target.value)}
+                onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 8))}
                 autoFocus
                 className="login-field__code"
+                maxLength={8}
               />
             </label>
             {error && <p className="login-error">{error}</p>}
@@ -121,6 +126,7 @@ export function LoginPage() {
             </button>
           </form>
         )}
+        </div>
       </div>
     </div>
   );

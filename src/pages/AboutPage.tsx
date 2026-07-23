@@ -1,5 +1,6 @@
 import { departments, roleHierarchy } from "../data/hierarchy";
 import { Stamp } from "../components/Stamp";
+import { pluralizePosady } from "../utils/pluralize";
 import "./AboutPage.css";
 
 export function AboutPage() {
@@ -64,7 +65,9 @@ export function AboutPage() {
               >
                 <span className="org-step__num">{i + 1}</span>
                 <span className="org-step__label">{level.label}</span>
-                <span className="org-step__count">{level.roles.length}</span>
+                <span className="org-step__count">
+                  {level.roles.length} {pluralizePosady(level.roles.length)}
+                </span>
               </div>
             ))}
           </div>

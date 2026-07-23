@@ -1,13 +1,47 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { reglamentSections } from "../data/reglament";
 import "./ReglamentPage.css";
 
 export function ReglamentPage() {
   const [activeSection, setActiveSection] = useState(reglamentSections[0].id);
+  const isClickScrolling = useRef(false);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (isClickScrolling.current) return;
+
+        const visible = entries
+          .filter((e) => e.isIntersecting)
+          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
+
+        if (visible.length > 0) {
+          const id = visible[0].target.id.replace("section-", "");
+          setActiveSection(id);
+        }
+      },
+      {
+        rootMargin: "-80px 0px -60% 0px",
+        threshold: 0,
+      },
+    );
+
+    reglamentSections.forEach((s) => {
+      const el = document.getElementById(`section-${s.id}`);
+      if (el) observer.observe(el);
+    });
+
+    return () => observer.disconnect();
+  }, []);
 
   function scrollToSection(id: string) {
+    isClickScrolling.current = true;
     setActiveSection(id);
     document.getElementById(`section-${id}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+
+    setTimeout(() => {
+      isClickScrolling.current = false;
+    }, 900);
   }
 
   return (

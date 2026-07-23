@@ -86,19 +86,6 @@
   animation: rise 0.8s var(--ease-standard) 0.15s both;
 }
 
-.hero__stamp {
-  font-family: var(--font-mono);
-  font-size: 0.68rem;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--color-teal);
-  border: 1px solid var(--color-teal);
-  border-radius: 999px;
-  padding: 0.3rem 0.9rem;
-  transform: rotate(-3deg);
-  opacity: 0.85;
-}
-
 .hero__id-card {
   width: 100%;
   max-width: 260px;
@@ -173,6 +160,26 @@
   gap: 1.25rem;
 }
 
+.quick-card {
+  position: relative;
+  background: var(--color-bg-raised);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+  padding: 1.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  box-shadow: var(--shadow-card);
+  transition: transform 0.28s var(--ease-standard), box-shadow 0.28s var(--ease-standard), border-color 0.28s var(--ease-standard);
+  animation: rise 0.6s var(--ease-standard) both;
+}
+
+.quick-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-card-hover);
+  border-color: var(--color-teal-soft);
+}
+
 .quick-card--featured {
   background: var(--color-navy);
   border-color: var(--color-navy);
@@ -201,26 +208,6 @@
 }
 
 .quick-card--featured:hover {
-  border-color: var(--color-teal-soft);
-}
-
-.quick-card {
-  position: relative;
-  background: var(--color-bg-raised);
-  border: 1px solid var(--color-line);
-  border-radius: var(--radius-md);
-  padding: 1.75rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-  box-shadow: var(--shadow-card);
-  transition: transform 0.28s var(--ease-standard), box-shadow 0.28s var(--ease-standard), border-color 0.28s var(--ease-standard);
-  animation: rise 0.6s var(--ease-standard) both;
-}
-
-.quick-card:hover {
-  transform: translateY(-4px);
-  box-shadow: var(--shadow-card-hover);
   border-color: var(--color-teal-soft);
 }
 
@@ -307,6 +294,26 @@
 
 .info-band__card--accent .eyebrow {
   color: var(--color-teal-soft);
+}
+
+.info-band__card--accent .btn--primary {
+  background: #fff;
+  color: var(--color-navy);
+}
+
+.info-band__card--accent .btn--primary:hover {
+  background: var(--color-teal-soft);
+  color: var(--color-navy-deep);
+}
+
+.info-band__card--accent .btn--ghost {
+  color: rgba(247, 250, 251, 0.92);
+  border-color: rgba(247, 250, 251, 0.4);
+}
+
+.info-band__card--accent .btn--ghost:hover {
+  border-color: #fff;
+  background: rgba(247, 250, 251, 0.1);
 }
 
 .info-band__actions {
