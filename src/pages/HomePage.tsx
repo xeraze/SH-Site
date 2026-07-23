@@ -122,7 +122,7 @@ export function HomePage() {
               <Link
                 to={item.to}
                 key={item.title}
-                className={`quick-card${i === 0 ? " quick-card--featured" : ""}`}
+                className="quick-card"
                 style={{ animationDelay: `${i * 90}ms` }}
               >
                 <span className="quick-card__icon">{ICONS[item.icon]}</span>

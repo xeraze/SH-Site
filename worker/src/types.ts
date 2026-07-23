@@ -8,6 +8,7 @@ export interface DoctorRecord {
   discordId: string;
   name: string;
   role: string;
+  isAdmin?: boolean;
 }
 
 export interface CodeRecord {
@@ -21,4 +22,5 @@ export interface SessionRecord {
   name: string;
   role: string;
   createdAt: number;
+  isAdmin?: boolean;
 }

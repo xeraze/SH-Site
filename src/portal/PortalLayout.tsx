@@ -3,7 +3,7 @@ import { useAuth } from "./AuthContext";
 import "./PortalLayout.css";
 
 export function PortalLayout() {
-  const { discordId, logout } = useAuth();
+  const { discordId, isAdmin, logout } = useAuth();
 
   return (
     <div className="portal-layout">
@@ -30,6 +30,14 @@ export function PortalLayout() {
           >
             Регламент
           </NavLink>
+          {isAdmin && (
+            <NavLink
+              to="/portal/dashboard/admin"
+              className={({ isActive }) => `portal-nav__link${isActive ? " portal-nav__link--active" : ""}`}
+            >
+              Управління
+            </NavLink>
+          )}
         </nav>
 
         <div className="portal-header__user">

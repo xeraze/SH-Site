@@ -11,6 +11,7 @@ import { ProtectedRoute } from "./portal/ProtectedRoute";
 import { PortalLayout } from "./portal/PortalLayout";
 import { HierarchyPage } from "./portal/HierarchyPage";
 import { ReglamentPage } from "./portal/ReglamentPage";
+import { AdminPage } from "./portal/AdminPage";
 
 function PublicSite() {
   return (
@@ -42,6 +43,7 @@ function App() {
         >
           <Route index element={<HierarchyPage />} />
           <Route path="reglament" element={<ReglamentPage />} />
+          <Route path="admin" element={<AdminPage />} />
         </Route>
         <Route path="/*" element={<PublicSite />} />
       </Routes>

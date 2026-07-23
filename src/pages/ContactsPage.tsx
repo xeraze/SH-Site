@@ -34,8 +34,7 @@ export function ContactsPage() {
     <>
       <section className="page-hero">
         <div className="container">
-          <Stamp>Discord · Roblox</Stamp>
-          <span className="eyebrow">Звернення</span>
+          <Stamp>Discord · Roblox · Звернення</Stamp>
           <h1>Контакти та звернення</h1>
           <p className="page-hero__lede">
             Всі звернення пацієнтів та учасників проєкту відбуваються через

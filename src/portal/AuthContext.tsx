@@ -8,6 +8,7 @@ interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
   discordId: string | null;
+  isAdmin: boolean;
   requestCode: (discordId: string) => Promise<{ ok: boolean; error?: string }>;
   verifyCode: (discordId: string, code: string) => Promise<{ ok: boolean; error?: string }>;
   logout: () => void;
@@ -19,6 +20,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [discordId, setDiscordId] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     const token = sessionStorage.getItem(SESSION_KEY);
@@ -36,10 +38,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const data = await res.json();
         setIsAuthenticated(true);
         setDiscordId(data.session?.discordId ?? null);
+        setIsAdmin(!!data.session?.isAdmin);
       })
       .catch(() => {
         sessionStorage.removeItem(SESSION_KEY);
         setIsAuthenticated(false);
+        setIsAdmin(false);
       })
       .finally(() => setIsLoading(false));
   }, []);
@@ -75,6 +79,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       sessionStorage.setItem(SESSION_KEY, data.token);
       setIsAuthenticated(true);
       setDiscordId(discordIdInput);
+      setIsAdmin(!!data.isAdmin);
       return { ok: true };
     } catch {
       return { ok: false, error: "Немає з'єднання з сервером авторизації" };
@@ -85,11 +90,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     sessionStorage.removeItem(SESSION_KEY);
     setIsAuthenticated(false);
     setDiscordId(null);
+    setIsAdmin(false);
   }
 
   return (
     <AuthContext.Provider
-      value={{ isAuthenticated, isLoading, discordId, requestCode, verifyCode, logout }}
+      value={{ isAuthenticated, isLoading, discordId, isAdmin, requestCode, verifyCode, logout }}
     >
       {children}
     </AuthContext.Provider>

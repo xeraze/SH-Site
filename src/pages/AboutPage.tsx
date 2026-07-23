@@ -8,8 +8,7 @@ export function AboutPage() {
     <>
       <section className="page-hero">
         <div className="container">
-          <Stamp>КНП · Слобідська МР</Stamp>
-          <span className="eyebrow">Про заклад</span>
+          <Stamp>КНП · Слобідська МР · Про заклад</Stamp>
           <h1>Про лікарню</h1>
           <p className="page-hero__lede">
             КНП «Слобідська ЦРЛ» СМР — медичний заклад, що об'єднує

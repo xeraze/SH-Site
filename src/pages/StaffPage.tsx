@@ -12,8 +12,7 @@ export function StaffPage() {
     <>
       <section className="page-hero">
         <div className="container">
-          <Stamp>Реєстр посад · 6 рівнів</Stamp>
-          <span className="eyebrow">Кадрова структура</span>
+          <Stamp>Реєстр посад · 6 рівнів · Кадрова структура</Stamp>
           <h1>Персонал лікарні</h1>
           <p className="page-hero__lede">
             Ієрархія посад лікарні — від Ради директорів до молодшого

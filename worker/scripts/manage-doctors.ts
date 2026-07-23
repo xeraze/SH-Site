@@ -6,11 +6,13 @@ function run(cmd: string): string {
   return execSync(cmd, { encoding: "utf-8", cwd: __dirname + "/.." });
 }
 
-function addDoctor(discordId: string, name: string, role: string) {
-  const value = JSON.stringify({ discordId, name, role });
+function addDoctor(discordId: string, name: string, role: string, isAdmin: boolean = false) {
+  const doctor: any = { discordId, name, role };
+  if (isAdmin) doctor.isAdmin = true;
+  const value = JSON.stringify(doctor);
   const cmd = `npx wrangler kv key put --binding=${KV_BINDING} --remote "doctor:${discordId}" '${value}'`;
   console.log(run(cmd));
-  console.log(`✓ Додано: ${name} (${role}) — Discord ID ${discordId}`);
+  console.log(`✓ Додано: ${name} (${role}) — Discord ID ${discordId}${isAdmin ? ' [ADMIN]' : ''}`);
 }
 
 function removeDoctor(discordId: string) {
@@ -28,12 +30,15 @@ const [, , action, ...args] = process.argv;
 
 switch (action) {
   case "add": {
-    const [discordId, name, role] = args;
+    const discordId = args[0];
+    const name = args[1];
+    const role = args[2];
+    const isAdmin = args.includes("--admin");
     if (!discordId || !name || !role) {
-      console.error('Використання: add <discordId> "<Ім\'я>" "<Посада>"');
+      console.error('Використання: add <discordId> "<Ім\'я>" "<Посада>" [--admin]');
       process.exit(1);
     }
-    addDoctor(discordId, name, role);
+    addDoctor(discordId, name, role, isAdmin);
     break;
   }
   case "remove": {

@@ -1,6 +1,8 @@
 @import "./tokens.css";
 
-*, *::before, *::after {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
 }
 
@@ -20,7 +22,10 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-h1, h2, h3, h4 {
+h1,
+h2,
+h3,
+h4 {
   font-family: var(--font-display);
   margin: 0;
   color: var(--color-navy-deep);
@@ -42,13 +47,15 @@ button {
   cursor: pointer;
 }
 
-ul, ol {
+ul,
+ol {
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-img, svg {
+img,
+svg {
   display: block;
   max-width: 100%;
 }
@@ -111,15 +118,5 @@ img, svg {
 .stamp__part {
   display: inline-flex;
   align-items: center;
-  gap: 0.6em;
-}
-
-.stamp__part + .stamp__part::before {
-  content: "";
-  display: inline-block;
-  width: 1px;
-  height: 0.7em;
-  background: var(--color-teal);
-  opacity: 0.5;
-  margin-right: 0.6em;
+  gap: 1em;
 }

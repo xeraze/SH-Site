@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { roleHierarchy, type Role, type RoleStatus } from "../data/hierarchy";
 import { Stamp } from "../components/Stamp";
 import "./HierarchyPage.css";
@@ -23,9 +23,28 @@ function StatusBadge({ role }: { role: Role }) {
   );
 }
 
+const WORKER_URL = import.meta.env.VITE_AUTH_WORKER_URL ?? "https://sh-site.xeraze-official.workers.dev";
+
 export function HierarchyPage() {
   const [selected, setSelected] = useState<Role | null>(null);
   const [filter, setFilter] = useState<RoleStatus | "all">("all");
+  const [liveStatuses, setLiveStatuses] = useState<Record<string, any>>({});
+
+  useEffect(() => {
+    fetch(`${WORKER_URL}/statuses`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.statuses) setLiveStatuses(data.statuses);
+      })
+      .catch(err => console.error("Failed to load statuses", err));
+  }, []);
+
+  // Підміняємо статичні статуси на живі
+  const getRoleData = (role: Role): Role => {
+    const live = liveStatuses[role.id];
+    if (!live) return role;
+    return { ...role, ...live };
+  };
 
   return (
     <div className="hierarchy-page">
@@ -54,8 +73,8 @@ export function HierarchyPage() {
 
       <div className="hierarchy-levels">
         {roleHierarchy.map((level) => {
-          const roles =
-            filter === "all" ? level.roles : level.roles.filter((r) => r.status === filter);
+          const roles = (filter === "all" ? level.roles : level.roles.filter((r) => getRoleData(r).status === filter))
+            .map(getRoleData);
           if (roles.length === 0) return null;
 
           return (

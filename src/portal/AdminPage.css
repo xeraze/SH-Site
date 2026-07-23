@@ -1,0 +1,106 @@
+.admin-page {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.admin-header h1 {
+  font-size: 1.8rem;
+  margin-bottom: 0.5rem;
+}
+
+.admin-header p {
+  color: var(--color-ink-soft);
+  max-width: 60ch;
+}
+
+.admin-grid {
+  display: grid;
+  gap: 1.5rem;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+}
+
+.admin-card {
+  background: var(--color-bg-raised);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.admin-card h3 {
+  font-size: 1rem;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.admin-card__level {
+  font-size: 0.75rem;
+  font-family: var(--font-mono);
+  color: var(--color-teal);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.25rem;
+  display: block;
+}
+
+.admin-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.admin-select {
+  padding: 0.5rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-line-strong);
+  background: var(--color-bg);
+  font-family: inherit;
+  font-size: 0.9rem;
+  color: var(--color-ink);
+}
+
+.admin-limits {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.admin-limits input {
+  width: 60px;
+  padding: 0.5rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-line-strong);
+  text-align: center;
+}
+
+.admin-limits span {
+  color: var(--color-ink-soft);
+}
+
+.admin-save {
+  background: var(--color-teal);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 0.5rem 1rem;
+  font-weight: 600;
+  transition: opacity 0.2s;
+}
+
+.admin-save:hover {
+  opacity: 0.9;
+}
+
+.admin-save:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.admin-status-msg {
+  font-size: 0.8rem;
+  text-align: center;
+  color: var(--color-teal);
+}
