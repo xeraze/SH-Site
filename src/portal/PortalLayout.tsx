@@ -3,7 +3,7 @@ import { useAuth } from "./AuthContext";
 import "./PortalLayout.css";
 
 export function PortalLayout() {
-  const { doctorName, logout } = useAuth();
+  const { discordId, logout } = useAuth();
 
   return (
     <div className="portal-layout">
@@ -33,7 +33,7 @@ export function PortalLayout() {
         </nav>
 
         <div className="portal-header__user">
-          {doctorName && <span className="portal-header__name">{doctorName}</span>}
+          {discordId && <span className="portal-header__name">{discordId}</span>}
           <button className="portal-header__logout" onClick={logout}>
             Вийти
           </button>

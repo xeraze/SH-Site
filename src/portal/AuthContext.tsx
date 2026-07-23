@@ -7,7 +7,7 @@ const SESSION_KEY = "slobidska_portal_session";
 interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
-  doctorName: string | null;
+  discordId: string | null;
   requestCode: (discordId: string) => Promise<{ ok: boolean; error?: string }>;
   verifyCode: (discordId: string, code: string) => Promise<{ ok: boolean; error?: string }>;
   logout: () => void;
@@ -18,7 +18,7 @@ const AuthContext = createContext<AuthState | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [doctorName, setDoctorName] = useState<string | null>(null);
+  const [discordId, setDiscordId] = useState<string | null>(null);
 
   useEffect(() => {
     const token = sessionStorage.getItem(SESSION_KEY);
@@ -26,14 +26,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsLoading(false);
       return;
     }
-    fetch(`${WORKER_URL}/session`, {
-      headers: { Authorization: `Bearer ${token}` },
+    fetch(`${WORKER_URL}/session-check`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token }),
     })
       .then(async (res) => {
         if (!res.ok) throw new Error("invalid session");
         const data = await res.json();
         setIsAuthenticated(true);
-        setDoctorName(data.name ?? null);
+        setDiscordId(data.session?.discordId ?? null);
       })
       .catch(() => {
         sessionStorage.removeItem(SESSION_KEY);
@@ -42,15 +44,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .finally(() => setIsLoading(false));
   }, []);
 
-  async function requestCode(discordId: string) {
+  async function requestCode(discordIdInput: string) {
     try {
       const res = await fetch(`${WORKER_URL}/request-code`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ discordId }),
+        body: JSON.stringify({ discordId: discordIdInput }),
       });
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
         return { ok: false, error: data.error ?? "Не вдалося надіслати код" };
       }
       return { ok: true };
@@ -59,21 +61,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  async function verifyCode(discordId: string, code: string) {
+  async function verifyCode(discordIdInput: string, code: string) {
     try {
       const res = await fetch(`${WORKER_URL}/verify-code`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ discordId, code }),
+        body: JSON.stringify({ discordId: discordIdInput, code }),
       });
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
         return { ok: false, error: data.error ?? "Невірний код" };
       }
-      const data = await res.json();
       sessionStorage.setItem(SESSION_KEY, data.token);
       setIsAuthenticated(true);
-      setDoctorName(data.name ?? null);
+      setDiscordId(discordIdInput);
       return { ok: true };
     } catch {
       return { ok: false, error: "Немає з'єднання з сервером авторизації" };
@@ -83,12 +84,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   function logout() {
     sessionStorage.removeItem(SESSION_KEY);
     setIsAuthenticated(false);
-    setDoctorName(null);
+    setDiscordId(null);
   }
 
   return (
     <AuthContext.Provider
-      value={{ isAuthenticated, isLoading, doctorName, requestCode, verifyCode, logout }}
+      value={{ isAuthenticated, isLoading, discordId, requestCode, verifyCode, logout }}
     >
       {children}
     </AuthContext.Provider>
