@@ -163,7 +163,6 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* Quick links */
 .quick-links {
   padding-top: 0;
 }
@@ -267,7 +266,6 @@
   color: var(--color-teal);
 }
 
-/* Info band */
 .info-band__inner {
   display: grid;
   grid-template-columns: 1fr 1fr;

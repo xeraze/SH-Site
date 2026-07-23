@@ -1,6 +1,5 @@
 import type { Env } from "./types";
 
-/** Генерує 6-значний числовий код підтвердження. */
 export function generateCode(): string {
   const array = new Uint32Array(1);
   crypto.getRandomValues(array);
@@ -8,7 +7,6 @@ export function generateCode(): string {
   return code;
 }
 
-/** Генерує криптографічно випадковий токен сесії. */
 export function generateToken(): string {
   const bytes = new Uint8Array(32);
   crypto.getRandomValues(bytes);
@@ -17,7 +15,6 @@ export function generateToken(): string {
     .join("");
 }
 
-/** Стандартні CORS-заголовки для відповідей Worker'а. */
 export function corsHeaders(env: Env): HeadersInit {
   return {
     "Access-Control-Allow-Origin": env.ALLOWED_ORIGIN,
@@ -39,7 +36,6 @@ export function jsonResponse(
   });
 }
 
-/** Проста in-memory-подібна перевірка частоти запитів через KV з TTL. */
 export async function isRateLimited(
   env: Env,
   key: string,

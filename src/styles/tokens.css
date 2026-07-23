@@ -1,5 +1,4 @@
 :root {
-  /* Колірна палітра — клінічна, стримана, з холодним підтоном */
   --color-bg: #F7FAFB;
   --color-bg-raised: #FFFFFF;
   --color-bg-muted: #EEF4F5;
@@ -19,12 +18,10 @@
   --color-status-occupied: #8B3E3E;
   --color-status-limited: #C98B3D;
 
-  /* Типографіка */
   --font-display: "Fraunces", "Source Serif Pro", serif;
   --font-body: "Manrope", -apple-system, "Segoe UI", sans-serif;
   --font-mono: "JetBrains Mono", "SF Mono", monospace;
 
-  /* Розміри */
   --radius-sm: 6px;
   --radius-md: 12px;
   --radius-lg: 20px;

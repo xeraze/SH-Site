@@ -1,16 +1,3 @@
-/**
- * Скрипт для управління списком допущеного персоналу в KV.
- *
- * Використання (після деплою Worker'а та створення KV):
- *
- *   npx tsx scripts/manage-doctors.ts add 123456789012345678 "Ковальська О.І." "Головний лікар"
- *   npx tsx scripts/manage-doctors.ts remove 123456789012345678
- *   npx tsx scripts/manage-doctors.ts list
- *
- * Скрипт викликає `wrangler kv key ...` під капотом — переконайтеся,
- * що ви авторизовані в wrangler (`npx wrangler login`) і що в
- * wrangler.toml вказано правильний id KV namespace.
- */
 import { execSync } from "node:child_process";
 
 const KV_BINDING = "AUTH_KV";

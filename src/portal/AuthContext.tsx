@@ -1,17 +1,6 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 
-/**
- * Авторизація порталу для лікарів.
- *
- * ВАЖЛИВО: усі функції нижче звертаються до Cloudflare Worker API.
- * Жодна перевірка коду чи пароля не відбувається на клієнті — фронтенд
- * лише відправляє запити та зберігає токен сесії, виданий Worker'ом.
- * Це зроблено навмисно: людина не може підробити авторизацію через
- * консоль браузера, бо логіки перевірки в браузері просто немає.
- *
- * Замініть WORKER_URL на адресу вашого розгорнутого Cloudflare Worker.
- */
-const WORKER_URL = import.meta.env.VITE_AUTH_WORKER_URL ?? "https://slobidska-auth.YOUR-SUBDOMAIN.workers.dev";
+const WORKER_URL = import.meta.env.VITE_AUTH_WORKER_URL ?? "https://sh-site.xeraze-official.workers.dev";
 
 const SESSION_KEY = "slobidska_portal_session";
 
@@ -37,7 +26,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsLoading(false);
       return;
     }
-    // Перевіряємо валідність токена на сервері при завантаженні
     fetch(`${WORKER_URL}/session`, {
       headers: { Authorization: `Bearer ${token}` },
     })

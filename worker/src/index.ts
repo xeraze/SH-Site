@@ -1,8 +1,8 @@
 import type { CodeRecord, DoctorRecord, Env, SessionRecord } from "./types";
 import { corsHeaders, generateCode, generateToken, isRateLimited, jsonResponse } from "./utils";
 
-const CODE_TTL_SECONDS = 5 * 60; // код дійсний 5 хвилин
-const SESSION_TTL_SECONDS = 24 * 60 * 60; // сесія дійсна 24 години
+const CODE_TTL_SECONDS = 5 * 60;
+const SESSION_TTL_SECONDS = 24 * 60 * 60;
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
@@ -30,13 +30,6 @@ export default {
   },
 };
 
-/**
- * КРОК 1: людина вводить Discord ID.
- * Перевіряємо, чи він є в списку допущеного персоналу (зберігається в KV
- * під ключем `doctor:<discordId>`, додається вручну адміністратором).
- * Якщо так — генеруємо код, кладемо його в KV на 5 хвилин та надсилаємо
- * вебхуком у приватний Discord-канал лікарні.
- */
 async function handleRequestCode(request: Request, env: Env): Promise<Response> {
   const body = await request.json().catch(() => null) as { discordId?: string } | null;
   const discordId = body?.discordId?.trim();
@@ -45,7 +38,6 @@ async function handleRequestCode(request: Request, env: Env): Promise<Response> 
     return jsonResponse({ error: "Некоректний Discord ID" }, { status: 400, env });
   }
 
-  // Захист від перебору: не більше 5 запитів коду на один Discord ID за 10 хвилин
   const limited = await isRateLimited(env, `ratelimit:code:${discordId}`, 5, 600);
   if (limited) {
     return jsonResponse(
@@ -56,7 +48,6 @@ async function handleRequestCode(request: Request, env: Env): Promise<Response> 
 
   const doctorRaw = await env.AUTH_KV.get(`doctor:${discordId}`);
   if (!doctorRaw) {
-    // Навмисно не повідомляємо, що саме не так (щоб не розкривати список персоналу)
     return jsonResponse(
       { error: "Discord ID не знайдено серед допущеного персоналу" },
       { status: 403, env },
@@ -76,12 +67,6 @@ async function handleRequestCode(request: Request, env: Env): Promise<Response> 
   return jsonResponse({ ok: true }, { env });
 }
 
-/**
- * КРОК 2: людина вводить код, отриманий у Discord.
- * Перевірка відбувається ВИКЛЮЧНО тут, на сервері. Код видаляється
- * одразу після використання (одноразовий), і при успіху видається
- * випадковий токен сесії, що зберігається в KV.
- */
 async function handleVerifyCode(request: Request, env: Env): Promise<Response> {
   const body = await request.json().catch(() => null) as
     | { discordId?: string; code?: string }
@@ -111,7 +96,6 @@ async function handleVerifyCode(request: Request, env: Env): Promise<Response> {
     return jsonResponse({ error: "Невірний код" }, { status: 401, env });
   }
 
-  // Код одноразовий — видаляємо одразу після успішної перевірки
   await env.AUTH_KV.delete(`code:${discordId}`);
 
   const doctorRaw = await env.AUTH_KV.get(`doctor:${discordId}`);
@@ -134,7 +118,6 @@ async function handleVerifyCode(request: Request, env: Env): Promise<Response> {
   return jsonResponse({ token, name: doctor.name, role: doctor.role }, { env });
 }
 
-/** Перевірка валідності токена сесії (викликається при завантаженні порталу). */
 async function handleSession(request: Request, env: Env): Promise<Response> {
   const auth = request.headers.get("Authorization");
   const token = auth?.startsWith("Bearer ") ? auth.slice(7) : null;
@@ -152,7 +135,6 @@ async function handleSession(request: Request, env: Env): Promise<Response> {
   return jsonResponse({ name: session.name, role: session.role }, { env });
 }
 
-/** Надсилає одноразовий код у приватний Discord-канал через вебхук. */
 async function sendDiscordWebhook(env: Env, doctor: DoctorRecord, code: string): Promise<void> {
   const payload = {
     embeds: [
