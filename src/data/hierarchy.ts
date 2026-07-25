@@ -4,7 +4,7 @@ export interface Role {
   id: string;
   title: string;
   description: string;
-  status: RoleStatus;
+  status?: RoleStatus;
   occupied?: number;
   limit?: number;
 }
@@ -187,47 +187,15 @@ export const roleHierarchy: RoleLevel[] = [
     colorAccent: "#4A5FBF",
     roles: [
       {
-        id: "doctor-highest",
-        title: "Лікар вищої категорії",
-        description:
-          "Найвищий кваліфікаційний рівень лікаря. Відповідає за постановку діагнозів та лікування хворих.",
-        status: "occupied",
-      },
-      {
-        id: "doctor-1cat",
-        title: "Лікар 1-ї категорії",
-        description: "Кваліфікований лікар з підтвердженим досвідом практики.",
-        status: "occupied",
-      },
-      {
-        id: "doctor-2cat",
-        title: "Лікар 2-ї категорії",
-        description: "Лікар з базовим рівнем кваліфікаційної категорії.",
-        status: "limited",
-        occupied: 3,
-        limit: 5,
-      },
-      {
-        id: "doctor-resident",
-        title: "Лікар-ординатор",
-        description: "Лікар, що проходить післядипломну підготовку за спеціальністю.",
-        status: "limited",
-        occupied: 2,
-        limit: 4,
-      },
-      {
-        id: "doctor-specialist",
-        title: "Лікар-спеціаліст",
-        description: "Лікар вузької спеціалізації, що веде профільний прийом.",
-        status: "vacant",
-      },
-      {
         id: "doctor-intern",
         title: "Лікар-інтерн",
         description: "Лікар на етапі первинної спеціалізації під наглядом досвідчених колег.",
-        status: "limited",
-        occupied: 4,
-        limit: 6,
+      },
+      {
+        id: "doctor",
+        title: "Лікар",
+        description:
+          "Відповідає за постановку діагнозів, лікування хворих та ведення пацієнтів у межах своєї спеціальності. Кваліфікаційна категорія відображається окремо на Discord-сервері лікарні.",
       },
     ],
   },
@@ -243,44 +211,20 @@ export const roleHierarchy: RoleLevel[] = [
         status: "occupied",
       },
       {
-        id: "nurse-highest",
-        title: "Медсестра/медбрат вищої категорії",
-        description: "Найвищий кваліфікаційний рівень середнього медперсоналу.",
-        status: "vacant",
-      },
-      {
-        id: "nurse-1cat",
-        title: "Медсестра/медбрат 1-ї категорії",
-        description: "Кваліфікована медсестра/медбрат з підтвердженою категорією.",
-        status: "limited",
-        occupied: 2,
-        limit: 4,
-      },
-      {
-        id: "nurse-2cat",
-        title: "Медсестра/медбрат 2-ї категорії",
-        description: "Медсестра/медбрат з базовим рівнем категорії.",
-        status: "vacant",
-      },
-      {
         id: "nurse",
         title: "Медсестра/медбрат",
-        description: "Виконує медичні маніпуляції та догляд за пацієнтами.",
-        status: "limited",
-        occupied: 5,
-        limit: 8,
+        description:
+          "Виконує медичні маніпуляції та догляд за пацієнтами. Кваліфікаційна категорія відображається окремо на Discord-сервері лікарні.",
       },
       {
         id: "radiology-tech",
         title: "Рентгенолаборант",
         description: "Проводить рентгенологічні дослідження.",
-        status: "vacant",
       },
       {
         id: "lab-assistant",
         title: "Фельдшер-лаборант",
         description: "Виконує лабораторні дослідження та аналізи.",
-        status: "vacant",
       },
     ],
   },
@@ -293,24 +237,17 @@ export const roleHierarchy: RoleLevel[] = [
         id: "housekeeper",
         title: "Сестра/брат-господиня",
         description: "Відповідає за господарське забезпечення відділення.",
-        status: "vacant",
       },
       {
         id: "orderly",
         title: "Санітар",
         description: "Забезпечує санітарний догляд та допомогу пацієнтам.",
-        status: "limited",
-        occupied: 3,
-        limit: 6,
       },
       {
         id: "support-staff",
         title: "Допоміжний персонал",
         description:
           "Працівники технічних служб, охорони та харчоблоку. Пильнують лад у лікарні, допомагають у щоденних турботах і підтримують належний порядок.",
-        status: "limited",
-        occupied: 4,
-        limit: 10,
       },
     ],
   },

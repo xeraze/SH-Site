@@ -1,14 +1,20 @@
 import { useState, useEffect } from "react";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "./AuthContext";
-import { roleHierarchy, type RoleStatus } from "../data/hierarchy";
+import { roleHierarchy, type Role, type RoleStatus } from "../data/hierarchy";
 import "./AdminPage.css";
 
 const WORKER_URL = import.meta.env.VITE_AUTH_WORKER_URL ?? "https://sh-site.xeraze-official.workers.dev";
 
+interface RoleStatusData {
+  status: RoleStatus;
+  occupied?: number;
+  limit?: number;
+}
+
 export function AdminPage() {
   const { isAdmin } = useAuth();
-  const [statuses, setStatuses] = useState<Record<string, any>>({});
+  const [statuses, setStatuses] = useState<Record<string, RoleStatusData>>({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -26,6 +32,12 @@ export function AdminPage() {
     return <Navigate to="/portal/dashboard" replace />;
   }
 
+  const getRoleData = (role: Role): Role => {
+    const live = statuses[role.id];
+    if (!live) return role;
+    return { ...role, ...live };
+  };
+
   return (
     <div className="admin-page">
       <div className="admin-header">
@@ -42,18 +54,18 @@ export function AdminPage() {
       ) : (
         <div className="admin-grid">
           {roleHierarchy.flatMap((level) =>
-            level.roles.map((role) => (
-              <AdminRoleCard
-                key={role.id}
-                roleId={role.id}
-                roleTitle={role.title}
-                levelLabel={level.label}
-                defaultStatus={role.status}
-                defaultOccupied={role.occupied}
-                defaultLimit={role.limit}
-                savedData={statuses[role.id]}
-              />
-            ))
+            level.roles.map((role) => {
+              const liveRole = getRoleData(role);
+              return (
+                <AdminRoleCard
+                  key={role.id}
+                  roleId={role.id}
+                  roleTitle={role.title}
+                  levelLabel={level.label}
+                  liveRole={liveRole}
+                />
+              );
+            })
           )}
         </div>
       )}
@@ -65,32 +77,25 @@ function AdminRoleCard({
   roleId,
   roleTitle,
   levelLabel,
-  defaultStatus,
-  defaultOccupied,
-  defaultLimit,
-  savedData,
+  liveRole,
 }: {
   roleId: string;
   roleTitle: string;
   levelLabel: string;
-  defaultStatus: RoleStatus;
-  defaultOccupied?: number;
-  defaultLimit?: number;
-  savedData?: any;
+  liveRole: Role;
 }) {
-  const [status, setStatus] = useState<RoleStatus>(savedData?.status || defaultStatus);
-  const [occupied, setOccupied] = useState<number>(savedData?.occupied ?? defaultOccupied ?? 0);
-  const [limit, setLimit] = useState<number>(savedData?.limit ?? defaultLimit ?? 0);
+  const [status, setStatus] = useState<RoleStatus>(liveRole.status ?? "vacant");
+  const [occupied, setOccupied] = useState<number>(liveRole.occupied ?? 0);
+  const [limit, setLimit] = useState<number>(liveRole.limit ?? 0);
   
   const [isSaving, setIsSaving] = useState(false);
   const [msg, setMsg] = useState("");
 
   const hasChanges = () => {
-    const current = savedData || { status: defaultStatus, occupied: defaultOccupied, limit: defaultLimit };
-    if (status !== current.status) return true;
+    if (status !== (liveRole.status ?? "vacant")) return true;
     if (status === "limited") {
-      if (occupied !== (current.occupied ?? 0)) return true;
-      if (limit !== (current.limit ?? 0)) return true;
+      if (occupied !== (liveRole.occupied ?? 0)) return true;
+      if (limit !== (liveRole.limit ?? 0)) return true;
     }
     return false;
   };

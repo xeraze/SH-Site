@@ -10,15 +10,12 @@ const STATUS_LABEL: Record<RoleStatus, string> = {
 };
 
 function StatusBadge({ role }: { role: Role }) {
-  const label =
-    role.status === "limited" && role.limit
-      ? `${role.occupied ?? 0} / ${role.limit}`
-      : STATUS_LABEL[role.status];
+  if (!role.status) return null;
 
   return (
     <span className={`status-badge status-badge--${role.status}`}>
       <span className="status-badge__dot" />
-      {label}
+      {STATUS_LABEL[role.status]}
     </span>
   );
 }
@@ -39,7 +36,6 @@ export function HierarchyPage() {
       .catch(err => console.error("Failed to load statuses", err));
   }, []);
 
-  // Підміняємо статичні статуси на живі
   const getRoleData = (role: Role): Role => {
     const live = liveStatuses[role.id];
     if (!live) return role;
@@ -59,7 +55,7 @@ export function HierarchyPage() {
         </div>
 
         <div className="hierarchy-filter">
-          {(["all", "vacant", "limited", "occupied"] as const).map((f) => (
+          {(["all", "vacant", "occupied"] as const).map((f) => (
             <button
               key={f}
               className={`hierarchy-filter__btn${filter === f ? " hierarchy-filter__btn--active" : ""}`}
