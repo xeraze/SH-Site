@@ -45,7 +45,7 @@ export const staffMembers: StaffMember[] = [
   },
   {
     id: "lyutsym",
-    fullName: "Дмитро Дмитрович Люцим",
+    fullName: "Люцим Дмитро Дмитрович",
     gender: "male",
     positions: [
       "Виконавчий директор",

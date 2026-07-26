@@ -7,16 +7,16 @@ function Avatar({ gender }: { gender: "male" | "female" }) {
     return (
       <svg viewBox="0 0 100 100" className="staff-card__avatar" aria-hidden="true">
         <circle cx="50" cy="50" r="50" fill="var(--color-bg-muted)" />
-        <circle cx="50" cy="38" r="14" fill="none" stroke="var(--color-ink-soft)" strokeWidth="2.4" />
         <path
-          d="M50 24c-6.5 0-11.5 4-13.5 9.5"
+          d="M50 23c-10 0-18 8-18 18 0 5 1.8 9.5 4.8 12.8-2 .6-3.8 1.3-3.8 1.3v7c4.6 2.6 10.7 4 17 4s12.4-1.4 17-4v-7s-1.8-.7-3.8-1.3c3-3.3 4.8-7.8 4.8-12.8 0-10-8-18-18-18Z"
           fill="none"
           stroke="var(--color-ink-soft)"
           strokeWidth="2.4"
-          strokeLinecap="round"
+          strokeLinejoin="round"
         />
+        <circle cx="50" cy="41" r="12" fill="none" stroke="var(--color-ink-soft)" strokeWidth="2.4" />
         <path
-          d="M20 82c3.5-14 15-24 30-24s26.5 10 30 24"
+          d="M20 82c3.5-13.5 15-23 30-23s26.5 9.5 30 23"
           fill="none"
           stroke="var(--color-ink-soft)"
           strokeWidth="2.4"
