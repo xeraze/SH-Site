@@ -7,18 +7,19 @@ function Avatar({ gender }: { gender: "male" | "female" }) {
     return (
       <svg viewBox="0 0 100 100" className="staff-card__avatar" aria-hidden="true">
         <circle cx="50" cy="50" r="50" fill="var(--color-bg-muted)" />
+        <circle cx="50" cy="38" r="14" fill="none" stroke="var(--color-ink-soft)" strokeWidth="2.4" />
         <path
-          d="M50 24c-9 0-16 7.5-16 17 0 6.5 3 12.3 8 15.7-11 3.6-19 12.7-21.5 24.3h59c-2.5-11.6-10.5-20.7-21.5-24.3 5-3.4 8-9.2 8-15.7 0-9.5-7-17-16-17Z"
+          d="M50 24c-6.5 0-11.5 4-13.5 9.5"
           fill="none"
           stroke="var(--color-ink-soft)"
           strokeWidth="2.4"
-          strokeLinejoin="round"
+          strokeLinecap="round"
         />
         <path
-          d="M34 44c4 2 10 3 16 3s12-1 16-3"
+          d="M20 82c3.5-14 15-24 30-24s26.5 10 30 24"
           fill="none"
           stroke="var(--color-ink-soft)"
-          strokeWidth="2"
+          strokeWidth="2.4"
           strokeLinecap="round"
         />
       </svg>
@@ -44,8 +45,8 @@ export function StaffPage() {
     <>
       <section className="page-hero">
         <div className="container">
-          <Stamp>Персонал лікарні · Співробітники</Stamp>
-          <h1>Співробітники</h1>
+          <Stamp>Персонал лікарні · Працівники</Stamp>
+          <h1>Працівники</h1>
           <p className="page-hero__lede">
             Керівний та медичний персонал лікарні. Фотографії будуть додані
             пізніше — наразі відображаються тимчасові заглушки.

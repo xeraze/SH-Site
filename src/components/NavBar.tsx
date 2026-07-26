@@ -6,7 +6,7 @@ const NAV_LINKS = [
   { to: "/", label: "Головна" },
   { to: "/pro-likarniu", label: "Про лікарню" },
   { to: "/viddilennya", label: "Відділення" },
-  { to: "/spivrobitnyky", label: "Співробітники" },
+  { to: "/spivrobitnyky", label: "Працівники" },
   { to: "/dlya-pacientiv", label: "Для пацієнтів" },
   { to: "/kontakty", label: "Контакти" },
 ];
