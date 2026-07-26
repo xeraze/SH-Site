@@ -11,12 +11,12 @@ const totalRoles = departments.reduce(
 const QUICK_LINKS = [
   {
     title: "Про лікарню",
-    text: "Структура закладу, відділення та загальні відомості про КНП.",
+    text: "Загальні відомості про заклад, досягнення та напрямки допомоги.",
     to: "/pro-likarniu",
     icon: "building",
   },
   {
-    title: "Персонал",
+    title: "Співробітники",
     text: "Структура лікарні з персоналом — від керівництва до кожного відділення.",
     to: "/spivrobitnyky",
     icon: "people",

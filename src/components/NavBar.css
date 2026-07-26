@@ -56,7 +56,7 @@
 .navbar__links {
   display: flex;
   align-items: center;
-  gap: 1.75rem;
+  gap: 1.35rem;
 }
 
 .navbar__link {

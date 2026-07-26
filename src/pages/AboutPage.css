@@ -51,6 +51,22 @@
   margin-block: 0.75rem 0.75rem;
 }
 
+.about-topic {
+  border-top: 1px solid var(--color-line);
+}
+
+.about-topic__title {
+  font-size: clamp(1.4rem, 2.6vw, 1.8rem);
+  margin-block: 0.6rem 1.1rem;
+}
+
+.about-topic__lede {
+  color: var(--color-ink-soft);
+  max-width: 62ch;
+  line-height: 1.7;
+  margin-bottom: 1.3rem;
+}
+
 .departments__lede {
   color: var(--color-ink-soft);
   max-width: 62ch;
