@@ -72,10 +72,10 @@ export function AboutPage() {
           <h2 className="about-topic__title">Лікарі</h2>
           <p className="about-topic__lede">
             Повний перелік лікарів та іншого персоналу лікарні — на сторінці
-            «Співробітники».
+            «Структура».
           </p>
-          <Link to="/spivrobitnyky" className="btn btn--primary">
-            Перейти до співробітників
+          <Link to="/viddilennya" className="btn btn--primary">
+            Перейти до структури
           </Link>
         </div>
       </section>

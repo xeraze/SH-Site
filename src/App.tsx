@@ -3,6 +3,7 @@ import { NavBar } from "./components/NavBar";
 import { Footer } from "./components/Footer";
 import { HomePage } from "./pages/HomePage";
 import { AboutPage } from "./pages/AboutPage";
+import { DepartmentsPage } from "./pages/DepartmentsPage";
 import { StaffPage } from "./pages/StaffPage";
 import { PatientsPage } from "./pages/PatientsPage";
 import { ContactsPage } from "./pages/ContactsPage";
@@ -14,8 +15,9 @@ function App() {
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/pro-likarniu" element={<AboutPage />} />
+        <Route path="/viddilennya" element={<DepartmentsPage />} />
+        <Route path="/viddilennya/:deptId" element={<DepartmentsPage />} />
         <Route path="/spivrobitnyky" element={<StaffPage />} />
-        <Route path="/spivrobitnyky/:deptId" element={<StaffPage />} />
         <Route path="/dlya-pacientiv" element={<PatientsPage />} />
         <Route path="/kontakty" element={<ContactsPage />} />
       </Routes>

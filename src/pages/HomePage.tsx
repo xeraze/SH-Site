@@ -16,9 +16,9 @@ const QUICK_LINKS = [
     icon: "building",
   },
   {
-    title: "Співробітники",
+    title: "Відділення",
     text: "Структура лікарні з персоналом — від керівництва до кожного відділення.",
-    to: "/spivrobitnyky",
+    to: "/viddilennya",
     icon: "people",
   },
   {
@@ -168,8 +168,8 @@ export function HomePage() {
               центр підтримки на Discord-сервері.
             </p>
             <div className="info-band__actions">
-              <Link to="/spivrobitnyky" className="btn btn--primary">
-                Персонал лікарні
+              <Link to="/viddilennya" className="btn btn--primary">
+                Структура відділень
               </Link>
               <a
                 href="https://discord.com/channels/1465334351452569800/1466418410035482706"

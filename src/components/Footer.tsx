@@ -21,7 +21,8 @@ export function Footer() {
           <strong className="footer__title">Розділи</strong>
           <ul className="footer__links">
             <li><Link to="/pro-likarniu">Про лікарню</Link></li>
-            <li><Link to="/spivrobitnyky">Структура</Link></li>
+            <li><Link to="/viddilennya">Структура</Link></li>
+            <li><Link to="/spivrobitnyky">Співробітники</Link></li>
             <li><Link to="/dlya-pacientiv">Для пацієнтів</Link></li>
             <li><Link to="/kontakty">Контакти</Link></li>
           </ul>
