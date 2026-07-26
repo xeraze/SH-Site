@@ -5,8 +5,7 @@ import "./NavBar.css";
 const NAV_LINKS = [
   { to: "/", label: "Головна" },
   { to: "/pro-likarniu", label: "Про лікарню" },
-  { to: "/struktura", label: "Структура" },
-  { to: "/spivrobitnyky", label: "Співробітники" },
+  { to: "/spivrobitnyky", label: "Структура" },
   { to: "/dlya-pacientiv", label: "Для пацієнтів" },
   { to: "/kontakty", label: "Контакти" },
 ];

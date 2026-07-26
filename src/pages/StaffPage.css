@@ -81,27 +81,25 @@
   transition: grid-template-rows 0.32s var(--ease-standard);
 }
 
+.staff-level__body > * {
+  min-height: 0;
+}
+
 .staff-level__body--open {
   grid-template-rows: 1fr;
 }
 
 .staff-level__description {
-  min-height: 0;
   overflow: hidden;
   padding: 0 1.4rem 1rem;
   font-size: 0.92rem;
   line-height: 1.65;
   color: var(--color-ink-soft);
-  opacity: 0;
-  transition: opacity 0.2s var(--ease-standard);
 }
 
 .staff-level__procedures {
-  min-height: 0;
   overflow: hidden;
   padding: 0 1.4rem 1.2rem;
-  opacity: 0;
-  transition: opacity 0.2s var(--ease-standard);
 }
 
 .staff-level__procedures-title {
@@ -128,26 +126,12 @@
   color: var(--color-ink-soft);
 }
 
-.staff-level__body--open .staff-level__description,
-.staff-level__body--open .staff-level__procedures {
-  opacity: 1;
-  transition: opacity 0.28s var(--ease-standard) 0.08s;
-}
-
 .staff-level__roles {
-  min-height: 0;
   overflow: hidden;
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 0.9rem;
   padding: 0 1.4rem 1.4rem;
-  opacity: 0;
-  transition: opacity 0.2s var(--ease-standard);
-}
-
-.staff-level__body--open .staff-level__roles {
-  opacity: 1;
-  transition: opacity 0.28s var(--ease-standard) 0.08s;
 }
 
 .role-chip {
