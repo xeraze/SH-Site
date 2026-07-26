@@ -1,15 +1,12 @@
 {
-  "name": "slobidska-auth-worker",
+  "name": "slobidska-worker",
   "version": "1.0.0",
-  "description": "Cloudflare Worker для авторизації Порталу для лікарів КНП «Слобідська ЦРЛ» СМР",
+  "description": "Cloudflare Worker для сайту КНП «Слобідська ЦРЛ» СМР",
   "private": true,
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
-    "typecheck": "tsc --noEmit",
-    "kv:create": "wrangler kv namespace create AUTH_KV",
-    "doctors": "tsx scripts/manage-doctors.ts",
-    "seed-statuses": "tsx scripts/seed-statuses.ts"
+    "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20260722.1",

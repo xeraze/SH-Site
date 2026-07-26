@@ -23,7 +23,6 @@ export function Footer() {
             <li><Link to="/pro-likarniu">Про лікарню</Link></li>
             <li><Link to="/spivrobitnyky">Персонал</Link></li>
             <li><Link to="/kontakty">Контакти</Link></li>
-            <li><Link to="/portal">Портал для лікарів</Link></li>
           </ul>
         </div>
 

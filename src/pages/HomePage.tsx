@@ -1,9 +1,12 @@
 import type { ReactElement } from "react";
 import { Link } from "react-router-dom";
-import { departments, roleHierarchy } from "../data/hierarchy";
+import { departments } from "../data/hierarchy";
 import "./HomePage.css";
 
-const totalRoles = roleHierarchy.reduce((sum, level) => sum + level.roles.length, 0);
+const totalRoles = departments.reduce(
+  (sum, dept) => sum + dept.staffGroups.reduce((s, g) => s + g.roles.length, 0),
+  0,
+);
 
 const QUICK_LINKS = [
   {
@@ -14,7 +17,7 @@ const QUICK_LINKS = [
   },
   {
     title: "Персонал",
-    text: "Ієрархія посад — від молодшого персоналу до керівництва.",
+    text: "Структура лікарні з персоналом — від керівництва до кожного відділення.",
     to: "/spivrobitnyky",
     icon: "people",
   },
@@ -83,10 +86,6 @@ export function HomePage() {
               <div className="hero__stat">
                 <strong>{departments.length}</strong>
                 <span>відділень</span>
-              </div>
-              <div className="hero__stat">
-                <strong>{roleHierarchy.length}</strong>
-                <span>рівнів ієрархії</span>
               </div>
               <div className="hero__stat">
                 <strong>{totalRoles}</strong>
@@ -165,12 +164,12 @@ export function HomePage() {
             <h2>Приєднатися до штату лікарні</h2>
             <p>
               Бажаєте отримати роль медичного чи допоміжного персоналу?
-              Ознайомтеся з ієрархією посад та подайте заявку через центр
-              підтримки на Discord-сервері.
+              Ознайомтеся зі структурою персоналу та подайте заявку через
+              центр підтримки на Discord-сервері.
             </p>
             <div className="info-band__actions">
               <Link to="/spivrobitnyky" className="btn btn--primary">
-                Ієрархія посад
+                Персонал лікарні
               </Link>
               <a
                 href="https://discord.com/channels/1465334351452569800/1466418410035482706"

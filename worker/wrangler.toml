@@ -2,9 +2,5 @@ name = "sh-site"
 main = "src/index.ts"
 compatibility_date = "2025-01-01"
 
-[[kv_namespaces]]
-binding = "SL_KV"
-id = "REPLACE_WITH_YOUR_KV_ID"
-
 [vars]
 ALLOWED_ORIGIN = "https://xeraze.github.io"

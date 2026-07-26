@@ -1,62 +1,154 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
-import { roleHierarchy } from "../data/hierarchy";
+import { useParams, Link, Navigate } from "react-router-dom";
+import { departments } from "../data/hierarchy";
 import { Stamp } from "../components/Stamp";
 import { pluralizePosady } from "../utils/pluralize";
 import "./StaffPage.css";
 
+function PersonAvatar() {
+  return (
+    <span className="person-avatar" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none">
+        <circle cx="12" cy="8.5" r="3.5" stroke="currentColor" strokeWidth="1.4" />
+        <path
+          d="M4.5 20c0-4.1 3.4-7 7.5-7s7.5 2.9 7.5 7"
+          stroke="currentColor"
+          strokeWidth="1.4"
+          strokeLinecap="round"
+        />
+      </svg>
+    </span>
+  );
+}
+
+function countRoles(deptId?: string) {
+  const list = deptId ? departments.filter((d) => d.id === deptId) : departments;
+  return list.reduce((sum, d) => sum + d.staffGroups.reduce((s, g) => s + g.roles.length, 0), 0);
+}
+
 export function StaffPage() {
-  const [openLevel, setOpenLevel] = useState<string | null>(roleHierarchy[0]?.id ?? null);
+  const { deptId } = useParams();
+
+  if (deptId) {
+    return <DepartmentStaffPage deptId={deptId} />;
+  }
 
   return (
     <>
       <section className="page-hero">
         <div className="container">
-          <Stamp>Реєстр посад · 6 рівнів · Кадрова структура</Stamp>
+          <Stamp>Структура лікарні · Персонал за відділеннями</Stamp>
           <h1>Персонал лікарні</h1>
           <p className="page-hero__lede">
-            Ієрархія посад лікарні — від Ради директорів до молодшого
-            медичного персоналу. Кожен рівень має власну зону
-            відповідальності в структурі закладу.
+            Персонал лікарні організовано за відділеннями. Оберіть відділення,
+            щоб переглянути його керівництво та штат співробітників.
           </p>
         </div>
       </section>
 
       <section className="section staff-section">
         <div className="container">
-          <div className="staff-ladder">
-            {roleHierarchy.map((level, levelIndex) => {
-              const isOpen = openLevel === level.id;
+          <div className="departments__grid">
+            {departments.map((dept, i) => {
+              const roleCount = countRoles(dept.id);
               return (
-                <div className="staff-level" key={level.id}>
+                <Link
+                  to={`/spivrobitnyky/${dept.id}`}
+                  className="dept-card"
+                  key={dept.id}
+                  style={{ animationDelay: `${i * 45}ms` }}
+                >
+                  <span className="dept-card__index">{String(i + 1).padStart(2, "0")}</span>
+                  <h3>{dept.name}</h3>
+                  <p>{dept.description}</p>
+                  <span className="dept-card__count">
+                    {roleCount} {pluralizePosady(roleCount)}
+                  </span>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+    </>
+  );
+}
+
+function DepartmentStaffPage({ deptId }: { deptId: string }) {
+  const dept = departments.find((d) => d.id === deptId);
+  const [openGroup, setOpenGroup] = useState<string | null>(dept?.staffGroups[0]?.id ?? null);
+
+  if (!dept) {
+    return <Navigate to="/spivrobitnyky" replace />;
+  }
+
+  return (
+    <>
+      <section className="page-hero">
+        <div className="container">
+          <Stamp>{`Структура лікарні · ${dept.name}`}</Stamp>
+          <h1>{dept.name}</h1>
+          <p className="page-hero__lede">{dept.description}</p>
+          <Link to="/spivrobitnyky" className="staff-back-link">
+            ← Усі відділення
+          </Link>
+        </div>
+      </section>
+
+      <section className="section staff-section">
+        <div className="container">
+          <div className="staff-ladder">
+            {dept.staffGroups.map((group, groupIndex) => {
+              const isOpen = openGroup === group.id;
+              return (
+                <div className="staff-level" key={group.id}>
                   <button
                     className={`staff-level__header${isOpen ? " staff-level__header--open" : ""}`}
-                    onClick={() => setOpenLevel(isOpen ? null : level.id)}
-                    style={{ ["--level-accent" as string]: level.colorAccent }}
+                    onClick={() => setOpenGroup(isOpen ? null : group.id)}
                     aria-expanded={isOpen}
                   >
                     <span className="staff-level__rank">
-                      {String(levelIndex + 1).padStart(2, "0")}
+                      {String(groupIndex + 1).padStart(2, "0")}
                     </span>
-                    <span className="staff-level__label">{level.label}</span>
+                    <span className="staff-level__label">{group.label}</span>
                     <span className="staff-level__count">
-                      {level.roles.length} {pluralizePosady(level.roles.length)}
+                      {group.roles.length} {pluralizePosady(group.roles.length)}
                     </span>
-                    <svg
-                      className="staff-level__chevron"
-                      viewBox="0 0 16 16"
-                      fill="none"
-                    >
-                      <path d="M4 6l4 4 4-4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                    <svg className="staff-level__chevron" viewBox="0 0 16 16" fill="none">
+                      <path
+                        d="M4 6l4 4 4-4"
+                        stroke="currentColor"
+                        strokeWidth="1.6"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
                     </svg>
                   </button>
 
                   <div className={`staff-level__body${isOpen ? " staff-level__body--open" : ""}`}>
+                    {group.description && (
+                      <p className="staff-level__description">{group.description}</p>
+                    )}
+                    {group.procedures && group.procedures.length > 0 && (
+                      <div className="staff-level__procedures">
+                        <span className="staff-level__procedures-title">
+                          Кабінети / види досліджень:
+                        </span>
+                        <ul>
+                          {group.procedures.map((proc) => (
+                            <li key={proc}>{proc}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
                     <div className="staff-level__roles">
-                      {level.roles.map((role) => (
-                        <div className="role-chip" key={role.id}>
-                          <h3>{role.title}</h3>
-                          <p>{role.description}</p>
+                      {group.roles.map((role) => (
+                        <div className="role-chip role-chip--person" key={role.id}>
+                          <PersonAvatar />
+                          <div className="role-chip__text">
+                            <h3>{role.title}</h3>
+                            {role.description && <p>{role.description}</p>}
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -64,19 +156,6 @@ export function StaffPage() {
                 </div>
               );
             })}
-          </div>
-
-          <div className="staff-cta">
-            <div>
-              <h2>Актуальні вакансії та статус посад</h2>
-              <p>
-                Інформацію про те, яка посада наразі вільна, а яка зайнята,
-                бачать авторизовані працівники лікарні у Порталі для лікарів.
-              </p>
-            </div>
-            <Link to="/portal" className="btn btn--primary">
-              Перейти до порталу
-            </Link>
           </div>
         </div>
       </section>
