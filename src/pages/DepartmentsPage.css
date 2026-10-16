@@ -1,16 +1,99 @@
+.dept-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.dept-list li {
+  border-bottom: 1px solid var(--color-line);
+}
+
+.dept-list li:last-child {
+  border-bottom: none;
+}
+
+.dept-list__item {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.65rem 0.9rem;
+  transition: background 0.12s var(--ease-standard);
+}
+
+.dept-list__item:hover {
+  background: var(--color-teal-tint);
+}
+
+.dept-list__index {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--color-line-strong);
+  width: 22px;
+  flex-shrink: 0;
+}
+
+.dept-list__body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.dept-list__body strong {
+  font-size: 0.92rem;
+  color: var(--color-navy-deep);
+}
+
+.dept-list__item:hover .dept-list__body strong {
+  color: var(--color-teal);
+}
+
+.dept-list__body span {
+  font-size: 0.8rem;
+  color: var(--color-ink-soft);
+  line-height: 1.45;
+}
+
+.dept-list__count {
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  color: var(--color-teal);
+  background: var(--color-teal-tint);
+  padding: 0.2rem 0.55rem;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.p-block__count {
+  font-size: 0.74rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.85);
+  font-family: var(--font-mono);
+}
+
+.dept-back {
+  margin-bottom: 1rem;
+}
+
+.dept-back a {
+  font-size: 0.86rem;
+  color: var(--color-teal);
+}
+
+.dept-back a:hover {
+  text-decoration: underline;
+}
+
 .staff-ladder {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
-  margin-bottom: 3rem;
+  margin-bottom: 1.5rem;
 }
 
 .staff-level {
-  border: 1px solid var(--color-line);
-  border-radius: var(--radius-md);
-  background: var(--color-bg-raised);
   overflow: hidden;
-  transition: border-color 0.25s var(--ease-standard);
 }
 
 .staff-level__header {
@@ -18,40 +101,29 @@
   display: flex;
   align-items: center;
   gap: 1.1rem;
-  padding: 1.1rem 1.4rem;
-  background: transparent;
+  padding: 0.6rem 0.9rem;
+  background: var(--color-teal-tint);
   border: none;
   text-align: left;
   position: relative;
+  transition: background 0.15s var(--ease-standard);
 }
 
-.staff-level__header::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 3px;
-  background: var(--level-accent, var(--color-teal));
-  transform: scaleY(0.3);
-  transition: transform 0.25s var(--ease-standard);
-}
-
-.staff-level__header--open::before {
-  transform: scaleY(1);
+.staff-level__header:hover {
+  background: #d5ecea;
 }
 
 .staff-level__rank {
   font-family: var(--font-mono);
-  font-size: 0.82rem;
-  color: var(--level-accent, var(--color-teal));
+  font-size: 0.78rem;
+  color: var(--color-teal);
   font-weight: 600;
-  width: 28px;
+  width: 26px;
 }
 
 .staff-level__label {
-  font-family: var(--font-display);
-  font-size: 1.12rem;
+  font-size: 0.98rem;
+  font-weight: 700;
   color: var(--color-navy-deep);
   flex: 1;
 }
@@ -92,15 +164,15 @@
 
 .staff-level__description {
   overflow: hidden;
-  padding: 0 1.4rem 1rem;
-  font-size: 0.92rem;
-  line-height: 1.65;
+  padding: 0.7rem 0.9rem 0;
+  font-size: 0.88rem;
+  line-height: 1.55;
   color: var(--color-ink-soft);
 }
 
 .staff-level__procedures {
   overflow: hidden;
-  padding: 0 1.4rem 1.2rem;
+  padding: 0.7rem 0.9rem 0;
 }
 
 .staff-level__procedures-title {
@@ -131,14 +203,14 @@
   overflow: hidden;
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 0.9rem;
-  padding: 0 1.4rem 1.4rem;
+  gap: 0.6rem;
+  padding: 0.7rem 0.9rem 0.9rem;
 }
 
 .role-chip {
   background: var(--color-bg-muted);
-  border-radius: var(--radius-sm);
-  padding: 1rem 1.15rem;
+  border: 1px solid var(--color-line);
+  padding: 0.65rem 0.8rem;
 }
 
 .role-chip h3 {
@@ -161,8 +233,8 @@
 
 .person-avatar {
   flex-shrink: 0;
-  width: 38px;
-  height: 38px;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
   background: var(--color-teal-tint);
   color: var(--color-teal);
@@ -172,35 +244,12 @@
 }
 
 .person-avatar svg {
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
 }
 
 .role-chip__text {
   min-width: 0;
-}
-
-.dept-card__count {
-  display: inline-block;
-  margin-top: 0.7rem;
-  font-family: var(--font-mono);
-  font-size: 0.78rem;
-  color: var(--color-ink-soft);
-  background: var(--color-bg-muted);
-  padding: 0.2rem 0.6rem;
-  border-radius: 999px;
-}
-
-.staff-back-link {
-  display: inline-block;
-  margin-top: 1.1rem;
-  font-size: 0.88rem;
-  color: var(--color-teal);
-  text-decoration: none;
-}
-
-.staff-back-link:hover {
-  text-decoration: underline;
 }
 
 @media (max-width: 700px) {
@@ -208,6 +257,9 @@
     grid-template-columns: 1fr;
   }
   .staff-level__count {
+    display: none;
+  }
+  .dept-list__count {
     display: none;
   }
 }

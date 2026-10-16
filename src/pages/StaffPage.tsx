@@ -1,5 +1,5 @@
 import { staffMembers } from "../data/staff";
-import { Stamp } from "../components/Stamp";
+import { PortalLayout } from "../components/PortalLayout";
 import "./StaffPage.css";
 
 function Avatar({ gender }: { gender: "male" | "female" }) {
@@ -9,32 +9,27 @@ function Avatar({ gender }: { gender: "male" | "female" }) {
 
 export function StaffPage() {
   return (
-    <>
-      <section className="page-hero">
-        <div className="container">
-          <Stamp>Персонал лікарні · Працівники</Stamp>
-          <h1>Працівники</h1>
-          <p className="page-hero__lede">
-            Керівний та медичний персонал лікарні. Фотографії будуть додані
-            пізніше — наразі відображаються тимчасові заглушки.
-          </p>
-        </div>
-      </section>
+    <PortalLayout title="Працівники лікарні">
+      <p className="p-lead">
+        Керівний та медичний персонал лікарні. Фотографії будуть додані
+        пізніше — наразі відображаються тимчасові заглушки.
+      </p>
 
-      <section className="section">
-        <div className="container">
-          <div className="staff-members-grid">
-            {staffMembers.map((member, i) => (
-              <div className="staff-card" key={member.id} style={{ animationDelay: `${i * 60}ms` }}>
-                <Avatar gender={member.gender} />
-                <h2 className="staff-card__name">{member.fullName}</h2>
-                <p className="staff-card__positions">{member.positions.join(", ")}</p>
-                <p className="staff-card__departments">{member.departments.join(", ")}</p>
+      <div className="p-block">
+        <div className="p-block__head">Штат працівників</div>
+        <ul className="staff-list">
+          {staffMembers.map((member) => (
+            <li key={member.id} className="staff-list__item">
+              <Avatar gender={member.gender} />
+              <div className="staff-list__text">
+                <strong>{member.fullName}</strong>
+                <span>{member.positions.join(", ")}</span>
+                <span className="staff-list__dept">{member.departments.join(", ")}</span>
               </div>
-            ))}
-          </div>
-        </div>
-      </section>
-    </>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </PortalLayout>
   );
 }

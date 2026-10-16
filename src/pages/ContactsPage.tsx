@@ -1,4 +1,4 @@
-import { Stamp } from "../components/Stamp";
+import { PortalLayout } from "../components/PortalLayout";
 import "./ContactsPage.css";
 
 const LINKS = [
@@ -19,7 +19,7 @@ const LINKS = [
   },
   {
     title: "Гра в Roblox",
-    text: "Приєднатися до ігрового світу «Слобідська ЦРЛ».",
+    text: "Приєднатися до ігрового світу \"Слобідська ЦРЛ\".",
     href: "https://www.roblox.com/share?code=9687247321d6614a842c75669b6f7218&type=ExperienceDetails",
   },
   {
@@ -31,57 +31,41 @@ const LINKS = [
 
 export function ContactsPage() {
   return (
-    <>
-      <section className="page-hero">
-        <div className="container">
-          <Stamp>Discord · Roblox · Звернення</Stamp>
-          <h1>Контакти та звернення</h1>
-          <p className="page-hero__lede">
-            Всі звернення пацієнтів та учасників проєкту відбуваються через
-            ігровий сервер та Discord-спільноту лікарні.
+    <PortalLayout title="Контакти та звернення">
+      <div className="p-block">
+        <div className="p-block__head">Як звернутися по допомогу</div>
+        <div className="p-block__body">
+          <p>
+            Якщо ви граєте за пацієнта, достатньо приєднатися до сервера гри
+            під час активної сесії та звернутися до медичного персоналу,
+            присутнього на зміні. Медики діють у межах свого рівня підготовки
+            та надають допомогу відповідно до ситуації вашого персонажа.
+          </p>
+          <p>
+            Для заявок на посаду, скарг або пропозицій використовуйте розділ
+            "Заявки" на сайті або центр підтримки на Discord-сервері.
           </p>
         </div>
-      </section>
+      </div>
 
-      <section className="section">
-        <div className="container contacts-grid">
-          <div className="contacts-note">
-            <h2>Як звернутися по допомогу</h2>
-            <p>
-              Якщо ви граєте за пацієнта, достатньо приєднатися до сервера
-              гри під час активної сесії та звернутися до медичного
-              персоналу, присутнього на зміні. Медики діють у межах свого
-              рівня підготовки та надають допомогу відповідно до ситуації
-              вашого персонажа.
-            </p>
-            <p>
-              Для заявок на посаду, скарг або пропозицій використовуйте
-              центр підтримки на Discord-сервері — там же можна ознайомитися
-              з детальним списком ролей та порядком подачі заявки.
-            </p>
-          </div>
-
-          <div className="contacts-links">
-            {LINKS.map((link) => (
-              <a
-                key={link.title}
-                href={link.href}
-                target="_blank"
-                rel="noreferrer"
-                className="contact-card"
-              >
-                <div>
-                  <h3>{link.title}</h3>
-                  <p>{link.text}</p>
-                </div>
-                <svg viewBox="0 0 16 16" fill="none" className="contact-card__arrow">
-                  <path d="M3.5 12.5l9-9M6 3.5h6.5V10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
+      <div className="p-block">
+        <div className="p-block__head p-block__head--teal">Корисні посилання</div>
+        <ul className="contacts-links">
+          {LINKS.map((link) => (
+            <li key={link.title}>
+              <a href={link.href} target="_blank" rel="noreferrer" className="contacts-links__item">
+                <span className="contacts-links__marker" aria-hidden="true">
+                  ▸
+                </span>
+                <span className="contacts-links__text">
+                  <strong>{link.title}</strong>
+                  <span>{link.text}</span>
+                </span>
               </a>
-            ))}
-          </div>
-        </div>
-      </section>
-    </>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </PortalLayout>
   );
 }

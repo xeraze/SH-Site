@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link } from "../components/AppLink";
 import "./Footer.css";
 
 export function Footer() {
@@ -6,14 +6,14 @@ export function Footer() {
     <footer className="footer">
       <div className="container footer__inner">
         <div className="footer__col">
-          <strong className="footer__title">КНП «Слобідська ЦРЛ» СМР</strong>
+          <strong className="footer__title">КНП "Слобідська ЦРЛ" СМР</strong>
           <p className="footer__text">
-            Комунальне некомерційне підприємство «Слобідська центральна районна
-            лікарня» Слобідської міської ради.
+            Комунальне некомерційне підприємство "Слобідська центральна районна
+            лікарня" Слобідської міської ради.
           </p>
           <p className="footer__note">
-            Медичний рольовий проєкт спільноти Roblox. Довідковий центр створено
-            для зручності учасників.
+            Медичний рольовий проєкт спільноти Roblox. Офіційний веб-портал
+            створено для зручності учасників.
           </p>
         </div>
 
@@ -24,7 +24,7 @@ export function Footer() {
             <li><Link to="/viddilennya">Структура</Link></li>
             <li><Link to="/spivrobitnyky">Працівники</Link></li>
             <li><Link to="/dlya-pacientiv">Для пацієнтів</Link></li>
-            <li><Link to="/kontakty">Контакти</Link></li>
+            <li><Link to="/zayavky">Заявки</Link></li>
           </ul>
         </div>
 
@@ -56,7 +56,9 @@ export function Footer() {
       </div>
 
       <div className="footer__bottom container">
-        <span>© {new Date().getFullYear()} Слобідська ЦРЛ. Рольовий проєкт спільноти.</span>
+        <span>
+          © {new Date().getFullYear()} Слобідська ЦРЛ. Рольовий проєкт спільноти.
+        </span>
       </div>
     </footer>
   );

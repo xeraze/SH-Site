@@ -1,188 +1,160 @@
-import type { ReactElement } from "react";
-import { Link } from "react-router-dom";
+import { useCallback, useEffect, useState } from "react";
+import { fetchAnnouncements, type PublicAnnouncement } from "../api";
+import { renderInline } from "../components/annMarkdown";
+import { Link } from "../components/AppLink";
+import { PortalLayout } from "../components/PortalLayout";
 import { departments } from "../data/hierarchy";
 import "./HomePage.css";
 
-const totalRoles = departments.reduce(
-  (sum, dept) => sum + dept.staffGroups.reduce((s, g) => s + g.roles.length, 0),
-  0,
-);
+const TICKER_PLACEHOLDER =
+  "Тут відображуються короткі оголошення! Додайте їх у кабінеті, розділ «Оголошення».";
 
-const QUICK_LINKS = [
-  {
-    title: "Про лікарню",
-    text: "Загальні відомості про заклад, досягнення та напрямки допомоги.",
-    to: "/pro-likarniu",
-    icon: "building",
-  },
-  {
-    title: "Відділення",
-    text: "Структура лікарні з персоналом — від керівництва до кожного відділення.",
-    to: "/viddilennya",
-    icon: "people",
-  },
-  {
-    title: "Контакти та звернення",
-    text: "Як звернутися до медиків та подати заявку на сервері.",
-    to: "/kontakty",
-    icon: "message",
-  },
+const INFO_LINKS = [
+  { to: "/dlya-pacientiv", label: "Порядок звернення до лікаря" },
+  { to: "/dlya-pacientiv", label: "Вартість послуг" },
+  { to: "/pro-likarniu", label: "Про заклад" },
+  { to: "/viddilennya", label: "Структура та персонал" },
+  { to: "/zayavky", label: "Подати електронну заявку" },
+  { to: "/kontakty", label: "Контакти та реквізити" },
 ];
 
-const ICONS: Record<string, ReactElement> = {
-  building: (
-    <svg viewBox="0 0 24 24" fill="none">
-      <path d="M4 21V5a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v16" stroke="currentColor" strokeWidth="1.4" />
-      <path d="M12 21V10a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v11" stroke="currentColor" strokeWidth="1.4" />
-      <path d="M2 21h20" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-      <path d="M7 8h1M7 12h1M7 16h1" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-      <path d="M15 13h1M15 17h1" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-    </svg>
-  ),
-  people: (
-    <svg viewBox="0 0 24 24" fill="none">
-      <circle cx="9" cy="8" r="3" stroke="currentColor" strokeWidth="1.4" />
-      <path d="M3.5 20c0-3.5 2.6-6 5.5-6s5.5 2.5 5.5 6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-      <circle cx="17" cy="7" r="2.4" stroke="currentColor" strokeWidth="1.4" />
-      <path d="M15.5 20c-.2-2.7 1.3-5.2 3.8-5.9" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-    </svg>
-  ),
-  message: (
-    <svg viewBox="0 0 24 24" fill="none">
-      <path d="M4 5h16v11H9l-4 4V5Z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
-      <path d="M8 9.5h8M8 13h5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-    </svg>
-  ),
-};
-
 export function HomePage() {
+  const [marqueeItems, setMarqueeItems] = useState<string[]>([]);
+  const [announcements, setAnnouncements] = useState<PublicAnnouncement[]>([]);
+
+  const loadAnnouncements = useCallback(async () => {
+    const items = await fetchAnnouncements();
+    const shorts = items
+      .filter((a) => a.type === "short" && a.text.length <= 80)
+      .slice(0, 5)
+      .map((a) => a.text);
+    setMarqueeItems(shorts);
+    setAnnouncements(
+      items
+        .filter((a) => a.type === "regular" && a.category !== "archive")
+        .slice(0, 5),
+    );
+  }, []);
+
+  useEffect(() => {
+    void loadAnnouncements();
+  }, [loadAnnouncements]);
+
+  const marqueeParts: React.ReactNode[] =
+    marqueeItems.length > 0 ? marqueeItems : [TICKER_PLACEHOLDER];
+
+  const renderMarquee = (keyPrefix: string) => (
+    <span>
+      {marqueeParts.map((part, i) => (
+        <span key={`${keyPrefix}-${i}`}>
+          {i > 0 && "  ***  "}
+          {renderInline(part, `${keyPrefix}-${i}`)}
+        </span>
+      ))}
+      {"  ***  "}
+    </span>
+  );
+
   return (
-    <>
-      <section className="hero">
-        <div className="container hero__inner">
-          <div className="hero__text">
-            <span className="eyebrow">КНП «СЛОБІДСЬКА ЦРЛ» СМР</span>
-            <h1 className="hero__title">
-              Довідковий центр
-              <br />
-              Слобідської центральної <em>районної лікарні</em>
-            </h1>
-            <p className="hero__lede">
-              Комунальне некомерційне підприємство «Слобідська центральна
-              районна лікарня» Слобідської міської ради — медичний рольовий
-              проєкт спільноти Roblox. Тут ви знайдете відомості про
-              структуру лікарні, персонал та порядок звернення.
-            </p>
-            <div className="hero__actions">
-              <Link to="/pro-likarniu" className="btn btn--primary">
-                Про лікарню
-              </Link>
-              <Link to="/kontakty" className="btn btn--ghost">
-                Як звернутися
-              </Link>
-            </div>
-
-            <div className="hero__stats">
-              <div className="hero__stat">
-                <strong>{departments.length}</strong>
-                <span>відділень</span>
-              </div>
-              <div className="hero__stat">
-                <strong>{totalRoles}</strong>
-                <span>штатних посад</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="hero__emblem-wrap">
-            <img src="/SH-Site/emblem.png" alt="Герб" className="hero__emblem" />
-            <div className="hero__id-card">
-              <span className="hero__id-card__row">
-                <span>Тип закладу</span>
-                <strong>КНП</strong>
-              </span>
-              <span className="hero__id-card__row">
-                <span>Підпорядкування</span>
-                <strong>Слобідська МР</strong>
-              </span>
-              <span className="hero__id-card__row">
-                <span>Статус</span>
-                <strong className="hero__id-card__status">Діє</strong>
-              </span>
-            </div>
-          </div>
+    <PortalLayout
+      title="Головна сторінка"
+    >
+      <div className="home-marquee" role="note">
+        <span className="home-marquee__label">УВАГА!</span>
+        <div className="home-marquee__track">
+          {renderMarquee("a")}
+          <span aria-hidden="true">{renderMarquee("b")}</span>
         </div>
-      </section>
+      </div>
 
-      <section className="section quick-links">
-        <div className="container">
-          <div className="quick-links__grid">
-            {QUICK_LINKS.map((item, i) => (
-              <Link
-                to={item.to}
-                key={item.title}
-                className="quick-card"
-                style={{ animationDelay: `${i * 90}ms` }}
-              >
-                <span className="quick-card__icon">{ICONS[item.icon]}</span>
-                <h3 className="quick-card__title">{item.title}</h3>
-                <p className="quick-card__text">{item.text}</p>
-                <span className="quick-card__arrow" aria-hidden="true">
-                  <svg viewBox="0 0 16 16" fill="none">
-                    <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                </span>
-              </Link>
+      <p className="p-lead">
+        Комунальне некомерційне підприємство "Слобідська центральна районна
+        лікарня" Слобідської міської ради — медичний рольовий проєкт спільноти
+        Roblox. Тут ви знайдете відомості про структуру лікарні, персонал та
+        порядок звернення.
+      </p>
+
+      <div className="home-stats home-stats--two">
+        <div className="home-stats__item">
+          <strong>{departments.length}</strong>
+          <span>відділень</span>
+        </div>
+        <div className="home-stats__item">
+          <strong>24/7</strong>
+          <span>прийом звернень</span>
+        </div>
+      </div>
+
+      <div className="p-block">
+        <div className="p-block__head">
+          <span>Останні новини та оголошення</span>
+          <Link to="/oholoshennya" className="p-block__more">
+            прочитати всі
+          </Link>
+        </div>
+        {announcements.length === 0 ? (
+          <p className="ann-empty">Поки що пусто</p>
+        ) : (
+          <ul className="home-news">
+            {announcements.map((a) => (
+              <li key={a.id} className="home-news__item">
+                <span className="p-date">{a.createdAt.slice(0, 10)}</span>
+                <div className="home-news__text">
+                  <Link to={`/oholoshennya/${a.id}`} className="home-news__title">
+                    {a.title || a.summary || a.text.slice(0, 60)}
+                  </Link>
+                  <p>{a.summary || a.text}</p>
+                </div>
+              </li>
             ))}
+          </ul>
+        )}
+      </div>
+
+      <div className="home-cols">
+        <div className="p-block">
+          <div className="p-block__head p-block__head--teal">Для пацієнтів</div>
+          <div className="p-block__body">
+            <p>
+              Щоб отримати допомогу, приєднайтеся до сервера гри та
+              зверніться до медичного персоналу на зміні. Розклад сесій
+              публікується у Discord-спільноті.
+            </p>
+            <Link to="/dlya-pacientiv" className="portal-cta">
+              Інформація для пацієнтів
+            </Link>
           </div>
         </div>
-      </section>
 
-      <section className="section info-band">
-        <div className="container info-band__inner">
-          <div className="info-band__card">
-            <span className="eyebrow">Для пацієнтів</span>
-            <h2>Звернення до медичного персоналу</h2>
-            <p>
-              Щоб отримати допомогу, достатньо приєднатися до сервера гри та
-              звернутися до медичного персоналу, присутнього на зміні.
-              Розклад ігрових сесій та актуальні події публікуються на
-              Discord-сервері проєкту.
-            </p>
-            <a
-              href="https://discord.com/channels/1465334351452569800/1465695682227601704"
-              target="_blank"
-              rel="noreferrer"
-              className="btn btn--outline"
-            >
-              Графік сесій у Discord
-            </a>
-          </div>
-
-          <div className="info-band__card info-band__card--accent">
-            <span className="eyebrow">Для майбутнього персоналу</span>
-            <h2>Приєднатися до штату лікарні</h2>
+        <div className="p-block">
+          <div className="p-block__head p-block__head--teal">Майбутньому персоналу</div>
+          <div className="p-block__body">
             <p>
               Бажаєте отримати роль медичного чи допоміжного персоналу?
-              Ознайомтеся зі структурою персоналу та подайте заявку через
-              центр підтримки на Discord-сервері.
+              Ознайомтеся зі структурою та подайте заявку онлайн.
             </p>
-            <div className="info-band__actions">
-              <Link to="/viddilennya" className="btn btn--primary">
-                Структура відділень
-              </Link>
-              <a
-                href="https://discord.com/channels/1465334351452569800/1466418410035482706"
-                target="_blank"
-                rel="noreferrer"
-                className="btn btn--ghost"
-              >
-                Подати заявку
-              </a>
-            </div>
+            <Link to="/zayavky" className="portal-cta">
+              Подати заявку на посаду
+            </Link>
           </div>
         </div>
-      </section>
-    </>
+      </div>
+
+      <div className="p-block">
+        <div className="p-block__head">Корисна інформація</div>
+        <ul className="home-info">
+          {INFO_LINKS.map((link) => (
+            <li key={link.label}>
+              <Link to={link.to}>
+                <span className="home-info__marker" aria-hidden="true">
+                  ▸
+                </span>
+                {link.label}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </PortalLayout>
   );
 }
