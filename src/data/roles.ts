@@ -11,15 +11,15 @@ export const ROLE_LABELS_UI: Record<string, string> = {
 };
 
 export const ROLE_ICONS_UI: Record<string, string> = {
-  patient: "🧑",
-  employee: "🏥",
-  operator: "📞",
-  department_head: "🚪",
-  deputy_director: "🗄",
-  executive_secretary: "📝",
-  med_director: "⚕️",
-  main_director: "👔",
-  sysadmin: "🔧",
+  patient: "mdi:account",
+  employee: "mdi:hospital-building",
+  operator: "mdi:headset",
+  department_head: "mdi:door-open",
+  deputy_director: "mdi:account-tie",
+  executive_secretary: "mdi:notebook-edit-outline",
+  med_director: "mdi:doctor",
+  main_director: "mdi:crown",
+  sysadmin: "mdi:shield-cog",
 };
 
 export const REVIEWER_ROLES_UI = [

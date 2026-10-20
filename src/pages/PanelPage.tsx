@@ -1,22 +1,30 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Icon } from "@iconify/react";
 import {
+  adminExportUser,
   adminSetBan,
+  adminUserAction,
   announcementLink,
   assignRole,
   copyText,
   deleteAnnouncement,
   deleteInvite,
+  fetchAccountRequests,
   fetchAdminUsers,
   fetchAnnouncementsManage,
   fetchApplicationsReview,
+  fetchAppointmentMessages,
   fetchAppointmentsQueue,
   fetchInvites,
   fetchMessages,
   fetchMe,
+  resolveAccountRequest,
   saveAnnouncement,
+  sendAppointmentMessage,
   sendMessage,
   setApplicationStatus,
   setAppointmentStatus,
+  type AccountRequestItem,
   type AnnouncementItem,
   type AdminUserItem,
   type ApplicationItem,
@@ -26,6 +34,8 @@ import {
   type PublicUser,
 } from "../api";
 import { PortalLayout } from "../components/PortalLayout";
+import { VideoPreview } from "../components/Announcements";
+import { renderMiniMarkdown, stripShortFormatting } from "../components/annMarkdown";
 import {
   ROLE_LABELS_UI,
   REVIEWER_ROLES_UI,
@@ -35,6 +45,7 @@ import {
   hasAnyRole,
 } from "../data/roles";
 import "./CabinetPage.css";
+import "../components/Announcements.css";
 
 const APPOINTMENT_STATUS_LABELS_UI: Record<string, string> = {
   new: "Нова",
@@ -45,17 +56,65 @@ const APPOINTMENT_STATUS_LABELS_UI: Record<string, string> = {
 
 type PanelTab = "appeals" | "jobs" | "callcenter" | "constructor" | "roles" | "users";
 
+function ProfileModal({
+  author,
+  roles,
+  onClose,
+}: {
+  author: NonNullable<ApplicationItem["author"]>;
+  roles?: string[];
+  onClose: () => void;
+}) {
+  return (
+    <div className="profile-modal-overlay" onClick={onClose}>
+      <div className="profile-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="profile-modal__head">
+          <strong>Профіль пацієнта</strong>
+          <button type="button" className="profile-modal__close" onClick={onClose}>
+            ×
+          </button>
+        </div>
+        <div className="profile-modal__body">
+          <p><strong>Ім'я:</strong> {author.name}</p>
+          <p><strong>Email:</strong> {author.email ?? "—"}</p>
+          {author.age != null && <p><strong>Вік:</strong> {author.age}</p>}
+          {author.registeredAt && (
+            <p>
+              <strong>Реєстрація:</strong>{" "}
+              {new Date(author.registeredAt + "Z").toLocaleDateString("uk-UA")}
+            </p>
+          )}
+          {roles && roles.length > 0 && (
+            <p>
+              <strong>Ролі:</strong>{" "}
+              {roles.map((r) => ROLE_LABELS_UI[r] ?? r).join(", ")}
+            </p>
+          )}
+          {author.bio && (
+            <p><strong>Про себе:</strong> {author.bio}</p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ReviewChat({
   app,
   onChanged,
+  onProfile,
+  onStatus,
 }: {
   app: ApplicationItem;
   onChanged: () => void;
+  onProfile: () => void;
+  onStatus: (status: string, needNote?: boolean) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<DialogueMessage[]>([]);
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
+  const [file, setFile] = useState<File | null>(null);
 
   const load = useCallback(async () => {
     const res = await fetchMessages(app.id);
@@ -63,30 +122,73 @@ function ReviewChat({
   }, [app.id]);
 
   useEffect(() => {
-    if (open) void load();
+    if (!open) return;
+    void load();
+    const t = window.setInterval(() => void load(), 2000);
+    const onFocus = () => void load();
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onFocus);
+    return () => {
+      window.clearInterval(t);
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onFocus);
+    };
   }, [open, load]);
 
   const onSend = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!text.trim()) return;
+    if (!text.trim() && !file) return;
     setSending(true);
-    const res = await sendMessage(app.id, text.trim());
+    let imageUrl: string | undefined;
+    if (file) {
+      const reader = new FileReader();
+      imageUrl = await new Promise((resolve) => {
+        reader.onload = () => resolve(reader.result as string);
+        reader.readAsDataURL(file);
+      });
+    }
+    const res = await sendMessage(app.id, text.trim() || "📎", imageUrl);
     setSending(false);
     if (res.ok) {
       setText("");
+      setFile(null);
       void load();
       onChanged();
     }
   };
 
+  const decided = app.status === "accepted" || app.status === "rejected";
+
   return (
     <>
+      {!decided && !open && (
+        <div className="cabinet-review-actions" style={{ marginBottom: "0.5rem" }}>
+          {(app.status === "reviewing" || app.status === "dialogue") && (
+            <>
+              <button
+                type="button"
+                className="cabinet-action cabinet-action--ok"
+                onClick={() => onStatus("accepted", true)}
+              >
+                Прийняти
+              </button>
+              <button
+                type="button"
+                className="cabinet-action cabinet-action--no"
+                onClick={() => onStatus("rejected", true)}
+              >
+                Відхилити
+              </button>
+            </>
+          )}
+        </div>
+      )}
       <button
         type="button"
         className="cabinet-action cabinet-action--dialogue"
         onClick={() => setOpen((v) => !v)}
       >
-        {open ? "Закрити діалог" : "Діалог"}
+        {open ? "Закрити чат" : "Діалог"}
       </button>
       {open && (
         <div className="cabinet-chat cabinet-chat--wide">
@@ -99,8 +201,16 @@ function ReviewChat({
                   key={m.id}
                   className={`cabinet-chat__msg${m.isReviewer ? " cabinet-chat__msg--staff" : ""}`}
                 >
-                  <span className="cabinet-chat__who">{m.senderName}</span>
-                  <p>{m.body}</p>
+                  <span
+                    className={`cabinet-chat__who${!m.isReviewer ? " cabinet-chat__who--clickable" : ""}`}
+                    onClick={!m.isReviewer ? onProfile : undefined}
+                  >
+                    {m.senderName}
+                  </span>
+                  {m.body && <p>{m.body}</p>}
+                  {m.imageUrl && (
+                    <img src={m.imageUrl} alt="" className="cabinet-chat__img" />
+                  )}
                 </li>
               ))}
             </ul>
@@ -113,6 +223,18 @@ function ReviewChat({
               placeholder="Відповісти пацієнту..."
               maxLength={4000}
             />
+            <label className="cabinet-chat__attach" title="Прикріпити зображення">
+              📎
+              <input
+                type="file"
+                accept="image/*"
+                style={{ display: "none" }}
+                onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+              />
+            </label>
+            {file && (
+              <span className="cabinet-chat__file">{file.name}</span>
+            )}
             <button type="submit" className="portal-cta" disabled={sending}>
               {sending ? "..." : "Надіслати"}
             </button>
@@ -127,6 +249,9 @@ function ReviewPanel({ kind }: { kind: "appeals" | "jobs" }) {
   const [items, setItems] = useState<ApplicationItem[]>([]);
   const [tab, setTab] = useState<"new" | "active" | "done">("new");
   const [msg, setMsg] = useState<string | null>(null);
+  const [profileAuthor, setProfileAuthor] = useState<
+    NonNullable<ApplicationItem["author"]> | null
+  >(null);
 
   const load = useCallback(async () => {
     setItems(await fetchApplicationsReview());
@@ -205,8 +330,27 @@ function ReviewPanel({ kind }: { kind: "appeals" | "jobs" }) {
                 </div>
                 {app.author && (
                   <div className="cabinet-apps__date">
-                    {app.author.name} · {app.author.email ?? "—"} ·{" "}
+                    <span
+                      className="author-link"
+                      onClick={() => setProfileAuthor(app.author!)}
+                    >
+                      {app.author.name}
+                    </span>{" "}
+                    · {app.author.email ?? "—"} ·{" "}
                     {new Date(app.createdAt + "Z").toLocaleString("uk-UA")}
+                    {app.author.age != null && <> · Вік: {app.author.age}</>}
+                    {app.author.registeredAt && (
+                      <>
+                        {" "}
+                        · Реєстрація:{" "}
+                        {new Date(app.author.registeredAt + "Z").toLocaleDateString("uk-UA")}
+                      </>
+                    )}
+                  </div>
+                )}
+                {app.author?.bio && (
+                  <div className="cabinet-apps__note">
+                    <strong>Про себе:</strong> {app.author.bio}
                   </div>
                 )}
                 <ul className="cabinet-review-answers">
@@ -216,8 +360,10 @@ function ReviewPanel({ kind }: { kind: "appeals" | "jobs" }) {
                     </li>
                   ))}
                 </ul>
-                {app.decisionNote && (
-                  <div className="cabinet-apps__note">{app.decisionNote}</div>
+                {(app.status === "accepted" || app.status === "rejected") && (
+                  <div className="cabinet-apps__note">
+                    Причина: {app.decisionNote || "Не вказана"}
+                  </div>
                 )}
                 <div className="cabinet-review-actions">
                   {app.status === "new" && (
@@ -229,26 +375,13 @@ function ReviewPanel({ kind }: { kind: "appeals" | "jobs" }) {
                       Розглядати
                     </button>
                   )}
-                  {(app.status === "reviewing" || app.status === "dialogue") && (
-                    <>
-                      <button
-                        type="button"
-                        className="cabinet-action cabinet-action--ok"
-                        onClick={() => void onStatus(app.id, "accepted", true)}
-                      >
-                        Прийняти
-                      </button>
-                      <button
-                        type="button"
-                        className="cabinet-action cabinet-action--no"
-                        onClick={() => void onStatus(app.id, "rejected", true)}
-                      >
-                        Відхилити
-                      </button>
-                    </>
-                  )}
                   {app.status !== "accepted" && app.status !== "rejected" && (
-                    <ReviewChat app={app} onChanged={() => void load()} />
+                    <ReviewChat
+                      app={app}
+                      onChanged={() => void load()}
+                      onProfile={() => app.author && setProfileAuthor(app.author)}
+                      onStatus={(status, needNote) => void onStatus(app.id, status, needNote)}
+                    />
                   )}
                 </div>
               </li>
@@ -256,6 +389,9 @@ function ReviewPanel({ kind }: { kind: "appeals" | "jobs" }) {
           </ul>
         )}
       </div>
+      {profileAuthor && (
+        <ProfileModal author={profileAuthor} onClose={() => setProfileAuthor(null)} />
+      )}
     </div>
   );
 }
@@ -264,6 +400,9 @@ function AppointmentsQueue() {
   const [items, setItems] = useState<AppointmentItem[]>([]);
   const [tab, setTab] = useState<"new" | "active" | "done">("new");
   const [msg, setMsg] = useState<string | null>(null);
+  const [profileAuthor, setProfileAuthor] = useState<
+    NonNullable<ApplicationItem["author"]> | null
+  >(null);
 
   const load = useCallback(async () => {
     setItems(await fetchAppointmentsQueue());
@@ -336,7 +475,13 @@ function AppointmentsQueue() {
                 </div>
                 {a.author && (
                   <div className="cabinet-apps__date">
-                    {a.author.name} · {a.author.email ?? "—"} ·{" "}
+                    <span
+                      className="author-link"
+                      onClick={() => setProfileAuthor(a.author!)}
+                    >
+                      {a.author.name}
+                    </span>{" "}
+                    · {a.author.email ?? "—"} ·{" "}
                     {new Date(a.createdAt + "Z").toLocaleString("uk-UA")}
                   </div>
                 )}
@@ -344,9 +489,12 @@ function AppointmentsQueue() {
                 <div className="cabinet-review-answers">
                   <p>{a.body}</p>
                 </div>
-                {a.decisionNote && (
-                  <div className="cabinet-apps__note">{a.decisionNote}</div>
+                {(a.status === "accepted" || a.status === "rejected") && (
+                  <div className="cabinet-apps__note">
+                    Причина: {a.decisionNote || "Не вказана"}
+                  </div>
                 )}
+                <PanelAppointmentChat appointment={a} />
                 <div className="cabinet-review-actions">
                   {a.status === "new" && (
                     <button
@@ -381,6 +529,9 @@ function AppointmentsQueue() {
           </ul>
         )}
       </div>
+      {profileAuthor && (
+        <ProfileModal author={profileAuthor} onClose={() => setProfileAuthor(null)} />
+      )}
     </div>
   );
 }
@@ -546,7 +697,7 @@ function resizeAnnouncementImage(file: File): Promise<string> {
       const img = new Image();
       img.onerror = () => reject(new Error("Некоректне зображення"));
       img.onload = () => {
-        if (img.type === "image/gif") {
+        if (file.type === "image/gif") {
           const raw = String(reader.result);
           if (raw.length > 160_000) {
             reject(new Error("GIF завеликий (до 150 КБ)"));
@@ -633,11 +784,80 @@ function AnnouncementsManage() {
     const start = el.selectionStart;
     const end = el.selectionEnd;
     const selected = text.slice(start, end);
-    const next = text.slice(0, start) + before + selected + after + text.slice(end);
+    if (
+      selected.startsWith(before) &&
+      selected.endsWith(after) &&
+      selected.length >= before.length + after.length
+    ) {
+      const stripped =
+        selected.slice(before.length, selected.length - after.length);
+      const next = text.slice(0, start) + stripped + text.slice(end);
+      setText(next);
+      requestAnimationFrame(() => {
+        el.focus();
+        el.setSelectionRange(start, start + stripped.length);
+      });
+      return;
+    }
+    let plain = selected;
+    if (before === after && (before === "**" || before === "*")) {
+      plain = plain.replace(
+        new RegExp(`\\${before}([^*]*)\\${before}`, "g"),
+        "$1",
+      );
+    } else if (before === "~~" && after === "~~") {
+      plain = plain.replace(/~~([^~]*)~~/g, "$1");
+    }
+    const next = text.slice(0, start) + before + plain + after + text.slice(end);
     setText(next);
+    const innerLen = plain.length;
     requestAnimationFrame(() => {
       el.focus();
-      el.setSelectionRange(start + before.length, end + before.length);
+      el.setSelectionRange(start + before.length, start + before.length + innerLen);
+    });
+  };
+
+  const listBlock = (marker: string) => {
+    const el = areaRef.current;
+    if (!el) return;
+    const start = el.selectionStart;
+    const end = el.selectionEnd;
+    const selected = text.slice(start, end);
+    if (
+      marker === "1. " &&
+      selected.split("\n").every((l) => /^\d+\.\s/.test(l) || !l.trim())
+    ) {
+      const stripped = selected
+        .split("\n")
+        .map((l) => l.replace(/^\d+\.\s/, ""))
+        .join("\n");
+      setText(text.slice(0, start) + stripped + text.slice(end));
+      requestAnimationFrame(() => {
+        el.focus();
+        el.setSelectionRange(start, start + stripped.length);
+      });
+      return;
+    }
+    if (marker === "- " && selected.split("\n").every((l) => l.startsWith("- ") || !l.trim())) {
+      const stripped = selected
+        .split("\n")
+        .map((l) => (l.startsWith(marker) ? l.slice(marker.length) : l))
+        .join("\n");
+      setText(text.slice(0, start) + stripped + text.slice(end));
+      requestAnimationFrame(() => {
+        el.focus();
+        el.setSelectionRange(start, start + stripped.length);
+      });
+      return;
+    }
+    const marked = (selected || "Пункт")
+      .split("\n")
+      .map((l) => (l.trim() ? marker + l.replace(/^\s*[-*]\s+/, "") : l))
+      .join("\n");
+    setText(text.slice(0, start) + marked + text.slice(end));
+    requestAnimationFrame(() => {
+      el.focus();
+      el.setSelectionRange(start + marked.length, start + marked.length);
     });
   };
 
@@ -646,6 +866,15 @@ function AnnouncementsManage() {
     if (!el) return;
     const start = el.selectionStart;
     const lineStart = text.lastIndexOf("\n", start - 1) + 1;
+    if (text.slice(lineStart).startsWith("## ")) {
+      const next = text.slice(0, lineStart) + text.slice(lineStart + 3);
+      setText(next);
+      requestAnimationFrame(() => {
+        el.focus();
+        el.setSelectionRange(start - 3, start - 3);
+      });
+      return;
+    }
     const next = text.slice(0, lineStart) + "## " + text.slice(lineStart);
     setText(next);
     requestAnimationFrame(() => {
@@ -742,11 +971,12 @@ function AnnouncementsManage() {
       return;
     }
     setSaving(true);
+    const finalText = type === "short" ? stripShortFormatting(text) : text;
     const res = await saveAnnouncement({
       type,
       title: type === "regular" ? title : undefined,
       summary: type === "regular" ? summary : undefined,
-      text,
+      text: finalText,
       tags: type === "regular" ? parseTags(tags) : [],
       visibility: type === "regular" ? visibility : "general",
       images: type === "regular" ? images : [],
@@ -918,6 +1148,27 @@ function AnnouncementsManage() {
               <button type="button" onClick={insertHeading} title="Заголовок">
                 H
               </button>
+              <button
+                type="button"
+                onClick={() => listBlock("- ")}
+                title="Маркований список"
+              >
+                •
+              </button>
+              <button
+                type="button"
+                onClick={() => listBlock("1. ")}
+                title="Нумерований список"
+              >
+                1.
+              </button>
+              <button
+                type="button"
+                onClick={() => wrapSelection("`")}
+                title="Моноширинний"
+              >
+                {"</>"}
+              </button>
             </div>
           )}
 
@@ -1057,20 +1308,27 @@ function AnnouncementsManage() {
             <span className="apps-field__label">Прев'ю</span>
             {type === "short" ? (
               <div className="cabinet-ann-preview-short">
-                {text || "Коротке оголошення з'явиться в біжучій строкі..."}
+                {stripShortFormatting(text) || "Коротке оголошення з'явиться в біжучій строкі..."}
               </div>
             ) : (
               <div className="cabinet-ann-preview-regular">
                 <strong>{title || "Заголовок"}</strong>
                 <p>{summary || "Короткий опис..."}</p>
-                <p>{text || "Текст оголошення..."}</p>
+                <div className="ann-md">{renderMiniMarkdown(text || "Текст оголошення...")}</div>
                 {images.length > 0 && (
                   <span className="cabinet-ann-preview-imgs">
-                    {images.map((_, i) => (
-                      <span key={i} className="cabinet-ann-preview-imgbox" />
+                    {images.map((img, i) => (
+                      <img key={i} src={img} alt={`Прев'ю ${i + 1}`} className="cabinet-ann-preview-img" />
                     ))}
                   </span>
                 )}
+                {videoLinks.map((link, i) => (
+                  <VideoPreview key={`pv${i}`} url={link} />
+                ))}
+                {bannerImage && (
+                  <img src={bannerImage} alt="Баннер" className="cabinet-ann-preview-img" />
+                )}
+                {bannerVideo && <VideoPreview url={bannerVideo} />}
               </div>
             )}
           </div>
@@ -1219,40 +1477,213 @@ export function PanelPage() {
 }
 
 
+function shortUa(ua: string | null): string {
+  if (!ua) return "—";
+  const b = /Firefox\//.test(ua)
+    ? "Firefox"
+    : /Edg\//.test(ua)
+      ? "Edge"
+      : /OPR\//.test(ua)
+        ? "Opera"
+        : /Chrome\//.test(ua)
+          ? "Chrome"
+          : /Safari\//.test(ua)
+            ? "Safari"
+            : "Інший";
+  const os = /Windows/.test(ua)
+    ? "Windows"
+    : /Android/.test(ua)
+      ? "Android"
+      : /iPhone|iPad|iPod/.test(ua)
+        ? "iOS"
+        : /Mac OS/.test(ua)
+          ? "macOS"
+          : /Linux/.test(ua)
+            ? "Linux"
+            : "";
+  return os ? `${b} · ${os}` : b;
+}
+
+function fmtDate(iso: string | null): string {
+  if (!iso) return "—";
+  const d = new Date(iso.endsWith("Z") ? iso : iso.replace(" ", "T") + "Z");
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleString("uk-UA", { dateStyle: "short", timeStyle: "short" });
+}
+
+function PanelAppointmentChat({ appointment }: { appointment: AppointmentItem }) {
+  const [open, setOpen] = useState(false);
+  const [messages, setMessages] = useState<DialogueMessage[]>([]);
+  const [text, setText] = useState("");
+  const [sending, setSending] = useState(false);
+  const [file, setFile] = useState<File | null>(null);
+  const terminal = appointment.status === "accepted" || appointment.status === "rejected";
+
+  const loadMessages = useCallback(async () => {
+    const res = await fetchAppointmentMessages(appointment.id);
+    setMessages(res.messages);
+  }, [appointment.id]);
+
+  useEffect(() => {
+    if (!open) return;
+    void loadMessages();
+    const t = window.setInterval(() => void loadMessages(), 2000);
+    return () => window.clearInterval(t);
+  }, [open, loadMessages]);
+
+  const onSend = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const body = text.trim();
+    if (!body && !file) return;
+    setSending(true);
+    let imageUrl: string | undefined;
+    if (file) {
+      const reader = new FileReader();
+      imageUrl = await new Promise((resolve) => {
+        reader.onload = () => resolve(reader.result as string);
+        reader.readAsDataURL(file);
+      });
+    }
+    const res = await sendAppointmentMessage(appointment.id, body || "📎", imageUrl);
+    setSending(false);
+    if (!res.ok) return;
+    setText("");
+    setFile(null);
+    await loadMessages();
+  };
+
+  return (
+    <div className="cabinet-chat">
+      {!terminal && (
+        <button type="button" className="cabinet-chat__toggle" onClick={() => setOpen(!open)}>
+          {open ? "Закрити чат" : `Чат з пацієнтом (${messages.length || "відкрити"})`}
+        </button>
+      )}
+      {open && !terminal && (
+        <div className="cabinet-chat__body">
+          <ul className="cabinet-chat__list">
+            {messages.map((m) => (
+              <li
+                key={m.id}
+                className={`cabinet-chat__msg${m.isReviewer ? " cabinet-chat__msg--staff" : " cabinet-chat__msg--user"}`}
+              >
+                <span className="cabinet-chat__author">{m.senderName}</span>
+                {m.body && <p>{m.body}</p>}
+                {m.imageUrl && (
+                  <img src={m.imageUrl} alt="" className="cabinet-chat__img" />
+                )}
+                <span className="cabinet-chat__date">
+                  {new Date(m.createdAt + "Z").toLocaleString("uk-UA")}
+                </span>
+              </li>
+            ))}
+          </ul>
+          <form onSubmit={onSend} className="cabinet-chat__form">
+            <input
+              type="text"
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              placeholder="Написати пацієнту..."
+              maxLength={4000}
+            />
+            <button type="submit" className="portal-cta" disabled={sending}>
+              {sending ? "..." : "Надіслати"}
+            </button>
+          </form>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function UsersBanPanel() {
   const [users, setUsers] = useState<AdminUserItem[]>([]);
+  const [requests, setRequests] = useState<AccountRequestItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [meId, setMeId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    const list = await fetchAdminUsers();
+    const [list, reqs] = await Promise.all([fetchAdminUsers(), fetchAccountRequests()]);
     setUsers(list);
+    setRequests(reqs.filter((r) => r.status === "pending"));
     setErr(list.length ? null : "Не вдалося завантажити користувачів");
     setLoading(false);
+    const me = await fetchMe();
+    setMeId(me?.id ?? null);
   }, []);
 
   useEffect(() => {
     void load();
   }, [load]);
 
-  const onBan = async (u: AdminUserItem) => {
-    const banned = !u.banned;
-    let reason: string | undefined;
-    if (banned) {
-      const r = window.prompt("Причина блокування:", "");
-      if (r === null) return;
-      reason = r.trim() || "Не вказано";
-    }
-    setBusyId(u.id);
-    const res = await adminSetBan(u.id, banned, reason);
+  const run = async (id: string, fn: () => Promise<{ ok: boolean; error?: string }>) => {
+    setBusyId(id);
+    const res = await fn();
     setBusyId(null);
     if (!res.ok) {
-      setErr(res.error);
+      setErr((res as { error?: string }).error ?? "Помилка");
       return;
     }
     setErr(null);
     await load();
+  };
+
+  const onBan = async (u: AdminUserItem) => {
+    const banned = !u.banned;
+    let reason: string | undefined;
+    let banIp = false;
+    let banUa = false;
+    if (banned) {
+      const r = window.prompt("Причина блокування:", "");
+      if (r === null) return;
+      reason = r.trim() || "Не вказано";
+      banIp = window.confirm("Також заблокувати цей IP-адресу?");
+      banUa = window.confirm("Також заблокувати цей браузер (user-agent)?");
+    }
+    await run(u.id, () => adminSetBan(u.id, banned, reason, { banIp, banUa }));
+  };
+
+  const onWarn = async (u: AdminUserItem) => {
+    const r = window.prompt("Причина попередження:", "");
+    if (r === null) return;
+    await run(u.id, () =>
+      adminUserAction(u.id, "warn", { reason: r.trim() || "Не вказано" }),
+    );
+  };
+
+  const onTimeout = async (u: AdminUserItem) => {
+    const h = window.prompt("На скільки годин заблокувати? (1–720)", "24");
+    if (h === null) return;
+    const hours = Number(h);
+    if (!Number.isFinite(hours) || hours < 1 || hours > 720) {
+      setErr("Введіть число від 1 до 720");
+      return;
+    }
+    await run(u.id, () => adminUserAction(u.id, "timeout", { hours }));
+  };
+
+  const onDelete = async (u: AdminUserItem) => {
+    const confirmText = window.prompt(
+      `Це остаточно видалить акаунт "${u.email ?? u.name}".\nВведіть DELETE для підтвердження:`,
+      "",
+    );
+    if (confirmText !== "DELETE") return;
+    await run(u.id, () => adminUserAction(u.id, "delete"));
+  };
+
+  const onExport = async (u: AdminUserItem) => {
+    setBusyId(u.id);
+    const res = await adminExportUser(u.id);
+    setBusyId(null);
+    if (!res.ok) setErr(res.error);
+  };
+
+  const onResolveRequest = async (req: AccountRequestItem, done: boolean) => {
+    const note = window.prompt("Причина / коментар (необов'язково):") ?? undefined;
+    if (note === null) return;
+    await run(req.userId, () => resolveAccountRequest(req.id, done, note || undefined));
   };
 
   if (loading) {
@@ -1264,56 +1695,169 @@ function UsersBanPanel() {
   }
 
   return (
-    <div className="p-block">
-      <div className="p-block__head">Користувачі</div>
-      <div className="p-block__body">
-        {err && <p className="cabinet-auth-msg cabinet-auth-msg--err">{err}</p>}
-        <table className="panel-users">
-          <thead>
-            <tr>
-              <th>Ім'я</th>
-              <th>Email</th>
-              <th>Посади</th>
-              <th>IP</th>
-              <th>Статус</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {users.map((u) => (
-              <tr key={u.id} className={u.banned ? "panel-users__row--banned" : undefined}>
-                <td>{u.name}</td>
-                <td>{u.email ?? "—"}</td>
-                <td>{u.roles.join(", ") || "—"}</td>
-                <td>{u.lastIp ?? "—"}</td>
-                <td>
-                  {u.banned ? (
-                    <span className="panel-users__ban" title={u.bannedReason ?? ""}>
-                      Заблоковано
-                    </span>
-                  ) : (
-                    "Активний"
-                  )}
-                </td>
-                <td>
-                  <button
-                    type="button"
-                    className="cabinet-logout"
-                    disabled={busyId === u.id}
-                    onClick={() => void onBan(u)}
-                  >
-                    {busyId === u.id
-                      ? "..."
-                      : u.banned
-                        ? "Розблокувати"
-                        : "Заблокувати"}
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+    <>
+      {requests.length > 0 && (
+        <div className="p-block">
+          <div className="p-block__head p-block__head--teal">
+            Запити на експорт / видалення даних
+          </div>
+          <div className="p-block__body">
+            <ul className="panel-requests">
+              {requests.map((r) => (
+                <li key={r.id} className="panel-requests__item">
+                  <strong>{r.name}</strong> ({r.email ?? "—"})
+                  <span>
+                    · {r.kind === "export" ? "Експорт даних" : "Видалення акаунта"} ·{" "}
+                    {fmtDate(r.createdAt)}
+                  </span>
+                  <div className="panel-requests__actions">
+                    <button
+                      type="button"
+                      className="cabinet-logout"
+                      disabled={busyId === r.userId}
+                      onClick={() => void onResolveRequest(r, true)}
+                    >
+                      Виконано
+                    </button>
+                    <button
+                      type="button"
+                      className="cabinet-logout"
+                      disabled={busyId === r.userId}
+                      onClick={() => void onResolveRequest(r, false)}
+                    >
+                      Відхилити
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      )}
+
+      <div className="p-block">
+        <div className="p-block__head">Користувачі</div>
+        <div className="p-block__body">
+          {err && <p className="cabinet-auth-msg cabinet-auth-msg--err">{err}</p>}
+          <div className="panel-users-wrap">
+            <table className="panel-users">
+              <thead>
+                <tr>
+                  <th>Ім'я</th>
+                  <th>Email</th>
+                  <th>Посади</th>
+                  <th>IP</th>
+                  <th>Пристрій</th>
+                  <th>Реєстрація</th>
+                  <th>Активність</th>
+                  <th>Статус</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {users.map((u) => (
+                  <tr key={u.id} className={u.banned ? "panel-users__row--banned" : undefined}>
+                    <td>{u.name}</td>
+                    <td>{u.email ?? "—"}</td>
+                    <td>{u.roles.join(", ") || "—"}</td>
+                    <td>{u.lastIp ?? "—"}</td>
+                    <td title={u.lastUa ?? ""}>{shortUa(u.lastUa)}</td>
+                    <td>{fmtDate(u.createdAt)}</td>
+                    <td>{fmtDate(u.lastSeen)}</td>
+                    <td>
+                      {u.banned ? (
+                        <span className="panel-users__ban" title={u.bannedReason ?? ""}>
+                          Заблоковано
+                        </span>
+                      ) : u.blockedUntil && new Date(u.blockedUntil + (u.blockedUntil.endsWith("Z") ? "" : "Z")) > new Date() ? (
+                        <span className="panel-users__ban" title={u.warningReason ?? ""}>
+                          Тимчасово до {fmtDate(u.blockedUntil)}
+                        </span>
+                      ) : (
+                        <span>
+                          Активний
+                          {u.warnings > 0 && (
+                            <span className="panel-users__warn" title={u.warningReason ?? ""}>
+                              <Icon icon="mdi:alert-outline" width={13} height={13} />{" "}
+                              {u.warnings}
+                            </span>
+                          )}
+                        </span>
+                      )}
+                    </td>
+                    <td>
+                      <div className="panel-users__actions">
+                        {!u.banned && u.id !== meId && (
+                          <>
+                            <button
+                              type="button"
+                              className="cabinet-logout"
+                              disabled={busyId === u.id}
+                              onClick={() => void onWarn(u)}
+                              title="Попередження"
+                            >
+                              <Icon icon="mdi:alert-outline" width={15} height={15} />
+                            </button>
+                            <button
+                              type="button"
+                              className="cabinet-logout"
+                              disabled={busyId === u.id}
+                              onClick={() => void onTimeout(u)}
+                              title="Тимчасова блокування"
+                            >
+                              <Icon icon="mdi:timer-sand" width={15} height={15} />
+                            </button>
+                          </>
+                        )}
+                        {u.blockedUntil && u.id !== meId && (
+                          <button
+                            type="button"
+                            className="cabinet-logout"
+                            disabled={busyId === u.id}
+                            onClick={() => void run(u.id, () => adminUserAction(u.id, "unblock"))}
+                          >
+                            Розблок.
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          className="cabinet-logout"
+                          disabled={busyId === u.id}
+                          onClick={() => void onExport(u)}
+                          title="Експорт даних (JSON)"
+                        >
+                          <Icon icon="mdi:download" width={15} height={15} />
+                        </button>
+                        <button
+                          type="button"
+                          className="cabinet-logout"
+                          disabled={busyId === u.id || u.id === meId}
+                          onClick={() => void onDelete(u)}
+                          title="Видалити акаунт"
+                        >
+                          <Icon icon="mdi:close" width={15} height={15} />
+                        </button>
+                        <button
+                          type="button"
+                          className="cabinet-logout"
+                          disabled={busyId === u.id}
+                          onClick={() => void onBan(u)}
+                        >
+                          {busyId === u.id
+                            ? "..."
+                            : u.banned
+                              ? "Розблокувати"
+                              : "Заблокувати"}
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
-    </div>
+    </>
   );
 }

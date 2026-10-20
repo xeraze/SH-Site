@@ -21,6 +21,8 @@
 
 .home-marquee__track {
   display: flex;
+  flex: 1;
+  min-width: 0;
   white-space: nowrap;
   overflow: hidden;
   background: var(--color-teal);
@@ -29,10 +31,23 @@
   font-size: 13px;
 }
 
-.home-marquee__track span {
-  display: inline-block;
+.home-marquee__group {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: baseline;
   padding-block: 5px;
-  animation: marquee-scroll 18s linear infinite;
+  animation: marquee-scroll linear infinite;
+  will-change: transform;
+}
+
+.home-marquee__unit {
+  flex: none;
+}
+
+.home-marquee__sep {
+  flex: none;
+  padding-inline: 1em;
+  opacity: 0.85;
 }
 
 @keyframes marquee-scroll {

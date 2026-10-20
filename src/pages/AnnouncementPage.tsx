@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
+import { Icon } from "@iconify/react";
 import {
   announcementLink,
   copyText,
@@ -141,7 +142,7 @@ export function AnnouncementPage() {
                   onClick={() => void onLike()}
                   title="Подобається"
                 >
-                  ♥ {item.likes}
+                  <Icon icon="mdi:heart" width={15} height={15} /> {item.likes}
                 </button>
                 <button
                   type="button"

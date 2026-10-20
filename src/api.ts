@@ -21,6 +21,11 @@ export interface PublicUser {
   needsProfile: boolean;
   emailNotifications: boolean;
   hasPassword: boolean;
+  googleLinked: boolean;
+  bio: string | null;
+  createdAt: string;
+  warnings: number;
+  blockedUntil: string | null;
 }
 
 export interface ApplicationItem {
@@ -33,7 +38,14 @@ export interface ApplicationItem {
   createdAt: string;
   decidedAt: string | null;
   decisionNote: string | null;
-  author?: { id: string; name: string; email: string | null };
+  author?: {
+    id: string;
+    name: string;
+    email: string | null;
+    age?: number | null;
+    registeredAt?: string | null;
+    bio?: string | null;
+  };
 }
 
 export interface NotificationItem {
@@ -99,6 +111,7 @@ export interface DialogueMessage {
   createdAt: string;
   senderName: string;
   isReviewer: boolean;
+  imageUrl?: string | null;
 }
 
 export interface InviteItem {
@@ -174,6 +187,7 @@ export async function saveProfile(input: {
   gender: string;
   age: number;
   avatar?: string | null;
+  bio?: string | null;
 }): Promise<{ ok: true; user: PublicUser } | { ok: false; error: string }> {
   const res = await apiFetch<{ user: PublicUser }>("/api/profile", {
     method: "POST",
@@ -200,6 +214,7 @@ export async function registerStart(input: {
   patronymic: string;
   gender: string;
   age: number;
+  password: string;
 }): Promise<{ ok: true; challengeId: string } | { ok: false; error: string }> {
   const res = await apiFetch<AuthChallengeStart>("/api/auth/register/start", {
     method: "POST",
@@ -224,10 +239,22 @@ export async function registerVerify(
 export async function loginPassword(
   email: string,
   password: string,
-): Promise<{ ok: true; token: string; user: PublicUser } | { ok: false; error: string }> {
-  const res = await apiFetch<AuthVerifyResult>("/api/auth/login/password", {
+): Promise<{ ok: true; challengeId: string; email: string } | { ok: false; error: string }> {
+  const res = await apiFetch<{ challengeId: string; email: string }>("/api/auth/login/password", {
     method: "POST",
     body: { email, password },
+  });
+  if (!res.ok) return { ok: false, error: res.error };
+  return { ok: true, challengeId: res.data.challengeId, email: res.data.email };
+}
+
+export async function loginVerify(
+  challengeId: string,
+  code: string,
+): Promise<{ ok: true; token: string; user: PublicUser } | { ok: false; error: string }> {
+  const res = await apiFetch<AuthVerifyResult>("/api/auth/login/verify", {
+    method: "POST",
+    body: { challengeId, code },
   });
   if (!res.ok) return { ok: false, error: res.error };
   return { ok: true, token: res.data.token, user: res.data.user };
@@ -268,6 +295,60 @@ export async function emailChangeVerify(
   return { ok: true, email: res.data.email };
 }
 
+export async function passwordChangeStart(
+  newPassword: string,
+  currentPassword?: string,
+): Promise<{ ok: true; email: string } | { ok: false; error: string }> {
+  const res = await apiFetch<{ ok: boolean; email: string }>(
+    "/api/auth/password-change/start",
+    { method: "POST", body: { newPassword, currentPassword } },
+  );
+  if (!res.ok) return { ok: false, error: res.error };
+  return { ok: true, email: res.data.email };
+}
+
+export async function passwordChangeConfirm(
+  token: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const res = await apiFetch<{ ok: boolean }>(
+    "/api/auth/password-change/confirm",
+    { method: "POST", body: { token } },
+  );
+  if (!res.ok) return { ok: false, error: res.error };
+  return { ok: true };
+}
+
+export async function googleLinkStart(): Promise<
+  { ok: true; url: string } | { ok: false; error: string }
+> {
+  const res = await apiFetch<{ url: string }>("/api/auth/google/link", {
+    method: "POST",
+  });
+  if (!res.ok) return { ok: false, error: res.error };
+  return { ok: true, url: res.data.url };
+}
+
+export async function googleUnlink(): Promise<
+  { ok: true } | { ok: false; error: string }
+> {
+  const res = await apiFetch<{ ok: boolean }>("/api/auth/google/unlink", {
+    method: "POST",
+  });
+  if (!res.ok) return { ok: false, error: res.error };
+  return { ok: true };
+}
+
+export async function accountRequest(
+  kind: "export" | "delete",
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const res = await apiFetch<{ ok: boolean }>("/api/account/request", {
+    method: "POST",
+    body: { kind },
+  });
+  if (!res.ok) return { ok: false, error: res.error };
+  return { ok: true };
+}
+
 export interface AdminUserItem {
   id: string;
   email: string | null;
@@ -277,7 +358,12 @@ export interface AdminUserItem {
   bannedReason: string | null;
   bannedAt: string | null;
   lastIp: string | null;
+  lastUa: string | null;
+  lastSeen: string | null;
   createdAt: string;
+  warnings: number;
+  warningReason: string | null;
+  blockedUntil: string | null;
 }
 
 export async function fetchAdminUsers(): Promise<AdminUserItem[]> {
@@ -290,13 +376,139 @@ export async function adminSetBan(
   id: string,
   banned: boolean,
   reason?: string,
+  opts?: { banIp?: boolean; banUa?: boolean },
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   const res = await apiFetch<{ ok: boolean }>(`/api/admin/users/${id}/ban`, {
     method: "POST",
-    body: { banned, reason },
+    body: { banned, reason, banIp: opts?.banIp, banUa: opts?.banUa },
   });
   if (!res.ok) return { ok: false, error: res.error };
   return { ok: true };
+}
+
+export async function adminUserAction(
+  id: string,
+  action: "warn" | "timeout" | "unblock" | "delete",
+  payload?: { reason?: string; hours?: number },
+): Promise<
+  { ok: true; warnings?: number; blockedUntil?: string | null } | { ok: false; error: string }
+> {
+  const res = await apiFetch<{ warnings?: number; blockedUntil?: string | null }>(
+    `/api/admin/users/${id}/${action}`,
+    { method: "POST", body: payload ?? {} },
+  );
+  if (!res.ok) return { ok: false, error: res.error };
+  return {
+    ok: true,
+    warnings: res.data.warnings,
+    blockedUntil: res.data.blockedUntil ?? null,
+  };
+}
+
+export async function adminExportUser(
+  id: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  try {
+    const headers: Record<string, string> = {};
+    const token = getToken();
+    if (token) headers.Authorization = `Bearer ${token}`;
+    const res = await fetch(`${API_BASE}/api/admin/users/${id}/export`, {
+      method: "POST",
+      headers: { ...headers, "Content-Type": "application/json" },
+      body: "{}",
+    });
+    if (!res.ok) {
+      const data = (await res.json().catch(() => ({}))) as { error?: string };
+      return { ok: false, error: data.error ?? "Не вдалося експортувати" };
+    }
+    const text = await res.text();
+    const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `user-${id}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+    return { ok: true };
+  } catch {
+    return { ok: false, error: "Помилка експорту" };
+  }
+}
+
+export interface AccountRequestItem {
+  id: string;
+  userId: string;
+  kind: string;
+  status: string;
+  createdAt: string;
+  email: string | null;
+  name: string;
+}
+
+export async function fetchAccountRequests(): Promise<AccountRequestItem[]> {
+  const res = await apiFetch<{ requests: AccountRequestItem[] }>("/api/admin/account-requests");
+  if (!res.ok) return [];
+  return res.data.requests;
+}
+
+export async function resolveAccountRequest(
+  id: string,
+  done: boolean,
+  note?: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const res = await apiFetch(`/api/admin/account-requests`, {
+    method: "POST",
+    body: { id, done, note },
+  });
+  if (!res.ok) return { ok: false, error: res.error };
+  return { ok: true };
+}
+
+export async function fetchUnread(): Promise<{ applications: number; appointments: number }> {
+  const res = await apiFetch<{ applications: number; appointments: number }>("/api/unread");
+  if (!res.ok) return { applications: 0, appointments: 0 };
+  return res.data;
+}
+
+export async function markSeen(scope: "applications" | "appointments"): Promise<void> {
+  await apiFetch("/api/unread", { method: "POST", body: { scope } });
+}
+
+export async function fetchAppointmentMessages(
+  id: string,
+): Promise<{ messages: DialogueMessage[]; status: string }> {
+  const res = await apiFetch<{ messages: DialogueMessage[]; status: string }>(
+    `/api/appointments/${id}/messages`,
+  );
+  if (!res.ok) return { messages: [], status: "" };
+  return res.data;
+}
+
+export async function sendAppointmentMessage(
+  id: string,
+  body: string,
+  imageUrl?: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const res = await apiFetch(`/api/appointments/${id}/messages`, {
+    method: "POST",
+    body: { body, imageUrl },
+  });
+  if (!res.ok) return { ok: false, error: res.error };
+  return { ok: true };
+}
+
+export async function googleRegisterVerify(
+  challengeId: string,
+  code: string,
+): Promise<
+  { ok: true; token: string; user: PublicUser } | { ok: false; error: string }
+> {
+  const res = await apiFetch<{ token: string; user: PublicUser }>(
+    "/api/auth/google/register/verify",
+    { method: "POST", body: { challengeId, code } },
+  );
+  if (!res.ok) return { ok: false, error: res.error };
+  return { ok: true, token: res.data.token, user: res.data.user };
 }
 
 export function announcementLink(id: string): string {
@@ -389,10 +601,11 @@ export async function fetchMessages(
 export async function sendMessage(
   id: string,
   body: string,
+  imageUrl?: string,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   const res = await apiFetch(`/api/applications/${id}/messages`, {
     method: "POST",
-    body: { body },
+    body: { body, imageUrl },
   });
   if (!res.ok) return { ok: false, error: res.error };
   return { ok: true };
@@ -415,6 +628,24 @@ export async function markNotificationsRead(ids?: string[]): Promise<void> {
     method: "POST",
     body: ids ? { ids } : {},
   });
+}
+
+export async function clearNotifications(): Promise<{ ok: boolean }> {
+  const res = await apiFetch("/api/notifications", { method: "DELETE" });
+  return { ok: res.ok };
+}
+
+export async function adminArchiveClear(): Promise<
+  { ok: true; deleted: number } | { ok: false; error: string }
+> {
+  const res = await apiFetch<{ ok: boolean; deleted?: number; error?: string }>(
+    "/api/archive/clear",
+    { method: "POST" },
+  );
+  if (!res.ok || typeof res.data?.deleted !== "number") {
+    return { ok: false, error: res.error ?? res.data?.error ?? "Помилка" };
+  }
+  return { ok: true, deleted: res.data.deleted };
 }
 
 export async function logout(): Promise<void> {
@@ -599,6 +830,30 @@ export async function setAppointmentStatus(
   const res = await apiFetch(`/api/appointments/${id}/status`, {
     method: "POST",
     body: { status, note },
+  });
+  if (!res.ok) return { ok: false, error: res.error };
+  return { ok: true };
+}
+
+export interface SessionItem {
+  token: string;
+  isCurrent: boolean;
+  userAgent: string | null;
+  ip: string | null;
+  lastSeen: string | null;
+  createdAt: string;
+}
+
+export async function fetchSessions(): Promise<SessionItem[]> {
+  const res = await apiFetch<{ sessions: SessionItem[] }>("/api/auth/sessions");
+  if (!res.ok) return [];
+  return res.data.sessions;
+}
+
+export async function revokeSession(token: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  const res = await apiFetch("/api/auth/sessions/revoke", {
+    method: "POST",
+    body: { token },
   });
   if (!res.ok) return { ok: false, error: res.error };
   return { ok: true };

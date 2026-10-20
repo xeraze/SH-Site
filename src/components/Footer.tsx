@@ -18,17 +18,6 @@ export function Footer() {
         </div>
 
         <div className="footer__col">
-          <strong className="footer__title">Розділи</strong>
-          <ul className="footer__links">
-            <li><Link to="/pro-likarniu">Про лікарню</Link></li>
-            <li><Link to="/viddilennya">Структура</Link></li>
-            <li><Link to="/spivrobitnyky">Працівники</Link></li>
-            <li><Link to="/dlya-pacientiv">Для пацієнтів</Link></li>
-            <li><Link to="/zayavky">Заявки</Link></li>
-          </ul>
-        </div>
-
-        <div className="footer__col">
           <strong className="footer__title">Спільнота</strong>
           <ul className="footer__links">
             <li>
@@ -59,6 +48,7 @@ export function Footer() {
         <span>
           © {new Date().getFullYear()} Слобідська ЦРЛ. Рольовий проєкт спільноти.
         </span>
+        <Link to="/umovy-ta-konfidentsiynist">Умови та конфіденційність</Link>
       </div>
     </footer>
   );

@@ -126,6 +126,7 @@ export function ApplicationsPage() {
                         rows={4}
                         placeholder={field.placeholder}
                         required={field.required}
+                        maxLength={2000}
                       />
                     ) : (
                       <input
@@ -133,6 +134,7 @@ export function ApplicationsPage() {
                         name={field.label}
                         placeholder={field.placeholder}
                         required={field.required}
+                        maxLength={300}
                       />
                     )}
                   </label>

@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { fetchAnnouncements, type PublicAnnouncement } from "../api";
-import { renderInline } from "../components/annMarkdown";
+import { renderInline, stripShortFormatting } from "../components/annMarkdown";
 import { Link } from "../components/AppLink";
 import { PortalLayout } from "../components/PortalLayout";
 import { departments } from "../data/hierarchy";
@@ -8,6 +8,10 @@ import "./HomePage.css";
 
 const TICKER_PLACEHOLDER =
   "Тут відображуються короткі оголошення! Додайте їх у кабінеті, розділ «Оголошення».";
+
+const MARQUEE_SPEED_PX_S = 60;
+const MARQUEE_MIN_DURATION_S = 8;
+const MARQUEE_MAX_DURATION_S = 60;
 
 const INFO_LINKS = [
   { to: "/dlya-pacientiv", label: "Порядок звернення до лікаря" },
@@ -21,13 +25,16 @@ const INFO_LINKS = [
 export function HomePage() {
   const [marqueeItems, setMarqueeItems] = useState<string[]>([]);
   const [announcements, setAnnouncements] = useState<PublicAnnouncement[]>([]);
+  const [marqueeCopies, setMarqueeCopies] = useState(3);
+  const [marqueeDuration, setMarqueeDuration] = useState(18);
+  const trackRef = useRef<HTMLDivElement>(null);
 
   const loadAnnouncements = useCallback(async () => {
     const items = await fetchAnnouncements();
     const shorts = items
       .filter((a) => a.type === "short" && a.text.length <= 80)
       .slice(0, 5)
-      .map((a) => a.text);
+      .map((a) => stripShortFormatting(a.text));
     setMarqueeItems(shorts);
     setAnnouncements(
       items
@@ -40,18 +47,43 @@ export function HomePage() {
     void loadAnnouncements();
   }, [loadAnnouncements]);
 
-  const marqueeParts: React.ReactNode[] =
-    marqueeItems.length > 0 ? marqueeItems : [TICKER_PLACEHOLDER];
+  const marqueeTexts = marqueeItems.length > 0 ? marqueeItems : [TICKER_PLACEHOLDER];
 
-  const renderMarquee = (keyPrefix: string) => (
-    <span>
-      {marqueeParts.map((part, i) => (
-        <span key={`${keyPrefix}-${i}`}>
-          {i > 0 && "  ***  "}
-          {renderInline(part, `${keyPrefix}-${i}`)}
+  useEffect(() => {
+    const el = trackRef.current;
+    if (!el) return;
+    const measure = () => {
+      const first = el.querySelector<HTMLElement>(".home-marquee__group");
+      if (!first) return;
+      const w = first.getBoundingClientRect().width;
+      if (w < 4) return;
+      const need = Math.ceil(el.clientWidth / w) + 1;
+      setMarqueeCopies(need > 12 ? 12 : Math.max(2, need));
+      const dur = w / MARQUEE_SPEED_PX_S;
+      setMarqueeDuration(
+        Math.min(MARQUEE_MAX_DURATION_S, Math.max(MARQUEE_MIN_DURATION_S, dur)),
+      );
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    if (document.fonts?.ready) void document.fonts.ready.then(measure);
+    return () => window.removeEventListener("resize", measure);
+  }, [marqueeItems]);
+
+  const renderMarqueeGroup = (copy: number) => (
+    <span
+      key={copy}
+      className="home-marquee__group"
+      style={{ animationDuration: `${marqueeDuration}s` }}
+      aria-hidden={copy > 0 || undefined}
+    >
+      {marqueeTexts.map((part, i) => (
+        <span key={`${copy}-${i}`} className="home-marquee__unit">
+          {i > 0 && <span className="home-marquee__sep">•</span>}
+          {renderInline(part, `m-${copy}-${i}`)}
         </span>
       ))}
-      {"  ***  "}
+      <span className="home-marquee__sep">•</span>
     </span>
   );
 
@@ -61,9 +93,8 @@ export function HomePage() {
     >
       <div className="home-marquee" role="note">
         <span className="home-marquee__label">УВАГА!</span>
-        <div className="home-marquee__track">
-          {renderMarquee("a")}
-          <span aria-hidden="true">{renderMarquee("b")}</span>
+        <div className="home-marquee__track" ref={trackRef}>
+          {Array.from({ length: marqueeCopies }, (_, c) => renderMarqueeGroup(c))}
         </div>
       </div>
 

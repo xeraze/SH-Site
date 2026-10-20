@@ -44,7 +44,7 @@ export const staffMembers: StaffMember[] = [
   },
   {
     id: "zakirko",
-    fullName: "Закірко Дмитро",
+    fullName: "Люцим Дмитро Дмитрович",
     gender: "male",
     positions: [
       "Заступник директора з питань стратегічно важливих техніко-інформаційно-технологічних питань",

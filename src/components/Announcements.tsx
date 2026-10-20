@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Icon } from "@iconify/react";
 import { AnnouncementBody } from "./AnnouncementBody";
 import { Link } from "./AppLink";
 import type { PublicAnnouncement } from "../api";
@@ -88,7 +89,9 @@ export function VideoPreview({ url }: { url: string }) {
           aria-label="Відтворити відео"
         >
           <img src={parsed.thumb} alt="" />
-          <span className="ann-video__play">▶</span>
+          <span className="ann-video__play">
+            <Icon icon="mdi:play-circle" width={48} height={48} />
+          </span>
         </button>
       )}
       <a className="ann-video__link" href={url} target="_blank" rel="noreferrer">
@@ -190,7 +193,7 @@ export function AnnouncementCard({
         <VideoPreview url={item.bannerVideo} />
       )}
       {isShort ? (
-        <AnnouncementBody text={item.text} />
+        <AnnouncementBody text={item.text} short />
       ) : (
         <p className="ann-card__summary">{summary}</p>
       )}
@@ -249,7 +252,7 @@ export function AnnouncementCard({
                   : "Подобається"
             }
           >
-            ♥ {item.likes}
+            <Icon icon="mdi:heart" width={15} height={15} /> {item.likes}
           </button>
         )}
         {extra}

@@ -1,5 +1,13 @@
 import type { ReactNode } from "react";
 
+export function stripShortFormatting(text: string): string {
+  return text
+    .replace(/^#{1,6}\s*/gm, "")
+    .replace(/\*\*([^*\n]+)\*\*/g, "$1")
+    .replace(/\*([^*\n]+)\*/g, "$1")
+    .trim();
+}
+
 export function renderInline(text: string, keyPrefix: string): ReactNode[] {
   const nodes: ReactNode[] = [];
   const re = /(\*\*[^*\n]+\*\*|\*[^*\n]+\*|__[^_\n]+__)/g;

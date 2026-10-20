@@ -13,6 +13,8 @@ import { PanelPage } from "./pages/PanelPage";
 import { AnnouncementsPage } from "./pages/AnnouncementsPage";
 import { AnnouncementPage } from "./pages/AnnouncementPage";
 import { ArchivePage } from "./pages/ArchivePage";
+import { LegalPage } from "./pages/LegalPage";
+import { AppointmentBookingPage } from "./pages/AppointmentBookingPage";
 
 function App() {
   return (
@@ -27,12 +29,14 @@ function App() {
           <Route path="/spivrobitnyky" element={<StaffPage />} />
           <Route path="/dlya-pacientiv" element={<PatientsPage />} />
           <Route path="/zayavky" element={<ApplicationsPage />} />
+          <Route path="/zapys-na-pryiom" element={<AppointmentBookingPage />} />
           <Route path="/kabinet" element={<CabinetPage />} />
           <Route path="/panel" element={<PanelPage />} />
           <Route path="/oholoshennya" element={<AnnouncementsPage />} />
           <Route path="/oholoshennya/:annId" element={<AnnouncementPage />} />
           <Route path="/arhiv" element={<ArchivePage />} />
           <Route path="/kontakty" element={<ContactsPage />} />
+          <Route path="/umovy-ta-konfidentsiynist" element={<LegalPage />} />
         </Routes>
       </main>
       <Footer />

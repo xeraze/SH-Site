@@ -19,7 +19,6 @@ export const APPLICATION_FORMS: ApplicationForm[] = [
     description: "Подайте заявку, щоб отримати посаду в нашій лікарні.",
     fields: [
       { label: "Ваш нікнейм у Roblox", placeholder: "@username", required: true },
-      { label: "Ваш реальний вік (OOC вік)", placeholder: "Напр.: 17", required: true },
       { label: "Бажана посада", placeholder: "Медична сестра / Санітар / Інше", required: true },
       { label: "Ваш досвід у RolePlay", placeholder: "Опишіть максимально розгорнуто", multiline: true, required: true },
       { label: "Чи перебуваєте ви у нашій Roblox-групі?", placeholder: "Так / Ні", required: true },

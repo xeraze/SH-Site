@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import {
+  adminArchiveClear,
   createArchiveCode,
+  deleteAnnouncement,
   fetchArchive,
   fetchMe,
   getToken,
@@ -23,6 +25,8 @@ export function ArchivePage() {
   const [redeemed, setRedeemed] = useState<PublicAnnouncement | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const [codeFor, setCodeFor] = useState<string | null>(null);
+  const [isSysadmin, setIsSysadmin] = useState(false);
+  const [clearBusy, setClearBusy] = useState(false);
 
   const load = useCallback(async () => {
     const hasToken = !!getToken();
@@ -33,6 +37,7 @@ export function ArchivePage() {
     }
     const me = await fetchMe();
     const isStaff = !!me && me.roles.some((r) => STAFF_ROLES_UI.includes(r));
+    setIsSysadmin(!!me && me.roles.includes("sysadmin"));
     setStaff(isStaff);
     if (isStaff) setItems(await fetchArchive());
     setLoading(false);
@@ -72,6 +77,31 @@ export function ArchivePage() {
       return;
     }
     setCodeFor(res.code);
+  };
+
+  const onDelete = async (id: string) => {
+    if (!window.confirm("Видалити це оголошення назавжди?")) return;
+    setMsg(null);
+    const res = await deleteAnnouncement(id);
+    if (!res.ok) {
+      setMsg(res.error);
+      return;
+    }
+    setItems((prev) => prev.filter((a) => a.id !== id));
+  };
+
+  const onClearAll = async () => {
+    if (!window.confirm("Видалити ВСІ архівні оголошення? Це незворотно.")) return;
+    setClearBusy(true);
+    const res = await adminArchiveClear();
+    setClearBusy(false);
+    if (!res.ok) {
+      setMsg(res.error);
+      return;
+    }
+    setMsg(null);
+    setItems([]);
+    window.alert(`Видалено: ${res.deleted}`);
   };
 
   return (
@@ -114,6 +144,18 @@ export function ArchivePage() {
             </div>
           )}
           {msg && <p className="cabinet-profile-error">{msg}</p>}
+          {isSysadmin && (
+            <div style={{ marginBottom: "1rem" }}>
+              <button
+                type="button"
+                className="cabinet-logout"
+                onClick={() => void onClearAll()}
+                disabled={clearBusy}
+              >
+                {clearBusy ? "..." : "Очистити весь архів"}
+              </button>
+            </div>
+          )}
           {items.length === 0 ? (
             <p className="ann-empty">Поки що пусто</p>
           ) : (
@@ -125,13 +167,24 @@ export function ArchivePage() {
                   onLike={onLike}
                   full
                   extra={
-                    <button
-                      type="button"
-                      className="cabinet-logout"
-                      onClick={() => void onMakeCode(a.id)}
-                    >
-                      Створити код для пацієнта
-                    </button>
+                    <>
+                      <button
+                        type="button"
+                        className="cabinet-logout"
+                        onClick={() => void onMakeCode(a.id)}
+                      >
+                        Створити код для пацієнта
+                      </button>
+                      {isSysadmin && (
+                        <button
+                          type="button"
+                          className="cabinet-logout"
+                          onClick={() => void onDelete(a.id)}
+                        >
+                          Видалити
+                        </button>
+                      )}
+                    </>
                   }
                 />
               ))}
