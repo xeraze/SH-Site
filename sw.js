@@ -23,10 +23,10 @@ self.addEventListener("fetch", (event) => {
   for (const ch of url.pathname) {
     hash = (hash * 31 + ch.charCodeAt(0)) % 997;
   }
-  const byContent = 2500 + (hash % 4) * 1300;
-  const byLoad = Math.random() * 4500;
-  const spike = Math.random() < 0.15 ? 10000 + Math.random() * 12000 : 0;
-  const delay = byContent + byLoad + spike;
+  const byContent = 1800 + (hash % 5) * 1400;
+  const byLoad = Math.random() * 5200;
+  const spike = Math.random() < 0.18 ? 9000 + Math.random() * 13000 : 0;
+  const delay = Math.max(1200, byContent + byLoad + spike);
 
   // Заголовки отдаём сразу (старая страница уходит, белый екран),
   // а тело віддаємо з затримкою — як справжнє повільне завантаження.
