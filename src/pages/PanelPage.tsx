@@ -8,6 +8,8 @@ import {
   assignRole,
   copyText,
   deleteAnnouncement,
+  deleteApplication,
+  deleteAppointment,
   deleteInvite,
   fetchAccountRequests,
   fetchAdminUsers,
@@ -38,6 +40,7 @@ import { VideoPreview } from "../components/Announcements";
 import { renderMiniMarkdown, stripShortFormatting } from "../components/annMarkdown";
 import {
   ROLE_LABELS_UI,
+  ROLE_ICONS_UI,
   REVIEWER_ROLES_UI,
   ASSIGNER_ROLES_UI,
   MANAGE_ANN_ROLES_UI,
@@ -58,36 +61,49 @@ type PanelTab = "appeals" | "jobs" | "callcenter" | "constructor" | "roles" | "u
 
 function ProfileModal({
   author,
-  roles,
   onClose,
 }: {
   author: NonNullable<ApplicationItem["author"]>;
-  roles?: string[];
   onClose: () => void;
 }) {
+  const roles = (author.roles ?? []).filter((r) => r !== "sysadmin");
   return (
     <div className="profile-modal-overlay" onClick={onClose}>
       <div className="profile-modal" onClick={(e) => e.stopPropagation()}>
         <div className="profile-modal__head">
-          <strong>Профіль пацієнта</strong>
+          <strong>Профіль</strong>
           <button type="button" className="profile-modal__close" onClick={onClose}>
             ×
           </button>
         </div>
         <div className="profile-modal__body">
-          <p><strong>Ім'я:</strong> {author.name}</p>
+          <div className="profile-modal__header">
+            {author.avatar ? (
+              <img src={author.avatar} alt="" className="profile-modal__avatar" />
+            ) : (
+              <div className="profile-modal__avatar profile-modal__avatar--empty">
+                <Icon icon="mdi:account" width={32} height={32} />
+              </div>
+            )}
+            <div>
+              <p className="profile-modal__name">{author.name}</p>
+              {roles.length > 0 && (
+                <span className="cabinet-role-badges">
+                  {roles.map((r) => (
+                    <span key={r} className="cabinet-role-icon" title={ROLE_LABELS_UI[r] ?? r}>
+                      <Icon icon={ROLE_ICONS_UI[r] ?? "mdi:account"} width={16} height={16} />
+                    </span>
+                  ))}
+                </span>
+              )}
+            </div>
+          </div>
           <p><strong>Email:</strong> {author.email ?? "—"}</p>
           {author.age != null && <p><strong>Вік:</strong> {author.age}</p>}
           {author.registeredAt && (
             <p>
               <strong>Реєстрація:</strong>{" "}
               {new Date(author.registeredAt + "Z").toLocaleDateString("uk-UA")}
-            </p>
-          )}
-          {roles && roles.length > 0 && (
-            <p>
-              <strong>Ролі:</strong>{" "}
-              {roles.map((r) => ROLE_LABELS_UI[r] ?? r).join(", ")}
             </p>
           )}
           {author.bio && (
@@ -286,6 +302,17 @@ function ReviewPanel({ kind }: { kind: "appeals" | "jobs" }) {
     void load();
   };
 
+  const onDelete = async (id: string) => {
+    if (!window.confirm("Видалити цю заявку назавжди?")) return;
+    setMsg(null);
+    const res = await deleteApplication(id);
+    if (!res.ok) {
+      setMsg(res.error);
+      return;
+    }
+    void load();
+  };
+
   return (
     <div className="p-block">
       <div className="p-block__head p-block__head--teal">
@@ -329,28 +356,25 @@ function ReviewPanel({ kind }: { kind: "appeals" | "jobs" }) {
                   </span>
                 </div>
                 {app.author && (
-                  <div className="cabinet-apps__date">
-                    <span
-                      className="author-link"
-                      onClick={() => setProfileAuthor(app.author!)}
-                    >
-                      {app.author.name}
-                    </span>{" "}
-                    · {app.author.email ?? "—"} ·{" "}
-                    {new Date(app.createdAt + "Z").toLocaleString("uk-UA")}
-                    {app.author.age != null && <> · Вік: {app.author.age}</>}
-                    {app.author.registeredAt && (
-                      <>
-                        {" "}
-                        · Реєстрація:{" "}
-                        {new Date(app.author.registeredAt + "Z").toLocaleDateString("uk-UA")}
-                      </>
+                  <div className="cabinet-apps__author">
+                    {app.author.avatar ? (
+                      <img src={app.author.avatar} alt="" className="cabinet-apps__avatar" />
+                    ) : (
+                      <div className="cabinet-apps__avatar cabinet-apps__avatar--empty">
+                        <Icon icon="mdi:account" width={20} height={20} />
+                      </div>
                     )}
-                  </div>
-                )}
-                {app.author?.bio && (
-                  <div className="cabinet-apps__note">
-                    <strong>Про себе:</strong> {app.author.bio}
+                    <div className="cabinet-apps__author-info">
+                      <span
+                        className="author-link"
+                        onClick={() => setProfileAuthor(app.author!)}
+                      >
+                        {app.author.name}
+                      </span>
+                      <span className="cabinet-apps__date">
+                        {new Date(app.createdAt + "Z").toLocaleString("uk-UA")}
+                      </span>
+                    </div>
                   </div>
                 )}
                 <ul className="cabinet-review-answers">
@@ -382,6 +406,15 @@ function ReviewPanel({ kind }: { kind: "appeals" | "jobs" }) {
                       onProfile={() => app.author && setProfileAuthor(app.author)}
                       onStatus={(status, needNote) => void onStatus(app.id, status, needNote)}
                     />
+                  )}
+                  {(app.status === "accepted" || app.status === "rejected") && (
+                    <button
+                      type="button"
+                      className="cabinet-action cabinet-action--no"
+                      onClick={() => void onDelete(app.id)}
+                    >
+                      Видалити
+                    </button>
                   )}
                 </div>
               </li>
@@ -433,6 +466,17 @@ function AppointmentsQueue() {
     void load();
   };
 
+  const onDelete = async (id: string) => {
+    if (!window.confirm("Видалити цей запис назавжди?")) return;
+    setMsg(null);
+    const res = await deleteAppointment(id);
+    if (!res.ok) {
+      setMsg(res.error);
+      return;
+    }
+    void load();
+  };
+
   return (
     <div className="p-block">
       <div className="p-block__head p-block__head--teal">Кол-центр: записи на прийом</div>
@@ -474,15 +518,25 @@ function AppointmentsQueue() {
                   </span>
                 </div>
                 {a.author && (
-                  <div className="cabinet-apps__date">
-                    <span
-                      className="author-link"
-                      onClick={() => setProfileAuthor(a.author!)}
-                    >
-                      {a.author.name}
-                    </span>{" "}
-                    · {a.author.email ?? "—"} ·{" "}
-                    {new Date(a.createdAt + "Z").toLocaleString("uk-UA")}
+                  <div className="cabinet-apps__author">
+                    {a.author.avatar ? (
+                      <img src={a.author.avatar} alt="" className="cabinet-apps__avatar" />
+                    ) : (
+                      <div className="cabinet-apps__avatar cabinet-apps__avatar--empty">
+                        <Icon icon="mdi:account" width={20} height={20} />
+                      </div>
+                    )}
+                    <div className="cabinet-apps__author-info">
+                      <span
+                        className="author-link"
+                        onClick={() => setProfileAuthor(a.author!)}
+                      >
+                        {a.author.name}
+                      </span>
+                      <span className="cabinet-apps__date">
+                        {new Date(a.createdAt + "Z").toLocaleString("uk-UA")}
+                      </span>
+                    </div>
                   </div>
                 )}
                 <div className="cabinet-apps__date">Бажана дата: {a.wantDate}</div>
@@ -522,6 +576,15 @@ function AppointmentsQueue() {
                         Відхилити
                       </button>
                     </>
+                  )}
+                  {(a.status === "accepted" || a.status === "rejected") && (
+                    <button
+                      type="button"
+                      className="cabinet-action cabinet-action--no"
+                      onClick={() => void onDelete(a.id)}
+                    >
+                      Видалити
+                    </button>
                   )}
                 </div>
               </li>
@@ -784,13 +847,13 @@ function AnnouncementsManage() {
     const start = el.selectionStart;
     const end = el.selectionEnd;
     const selected = text.slice(start, end);
+
     if (
       selected.startsWith(before) &&
       selected.endsWith(after) &&
       selected.length >= before.length + after.length
     ) {
-      const stripped =
-        selected.slice(before.length, selected.length - after.length);
+      const stripped = selected.slice(before.length, selected.length - after.length);
       const next = text.slice(0, start) + stripped + text.slice(end);
       setText(next);
       requestAnimationFrame(() => {
@@ -799,6 +862,25 @@ function AnnouncementsManage() {
       });
       return;
     }
+
+    const beforeText = text.slice(0, start);
+    const afterText = text.slice(end);
+    if (
+      beforeText.endsWith(before) &&
+      afterText.startsWith(after)
+    ) {
+      const next =
+        text.slice(0, start - before.length) +
+        selected +
+        text.slice(end + after.length);
+      setText(next);
+      requestAnimationFrame(() => {
+        el.focus();
+        el.setSelectionRange(start - before.length, start - before.length + selected.length);
+      });
+      return;
+    }
+
     let plain = selected;
     if (before === after && (before === "**" || before === "*")) {
       plain = plain.replace(
@@ -1696,12 +1778,14 @@ function UsersBanPanel() {
 
   return (
     <>
-      {requests.length > 0 && (
-        <div className="p-block">
-          <div className="p-block__head p-block__head--teal">
-            Запити на експорт / видалення даних
-          </div>
-          <div className="p-block__body">
+      <div className="p-block">
+        <div className="p-block__head p-block__head--teal">
+          Запити на експорт / видалення даних
+        </div>
+        <div className="p-block__body">
+          {requests.length === 0 ? (
+            <p className="cabinet-profile-note">Немає активних запитів.</p>
+          ) : (
             <ul className="panel-requests">
               {requests.map((r) => (
                 <li key={r.id} className="panel-requests__item">
@@ -1731,9 +1815,9 @@ function UsersBanPanel() {
                 </li>
               ))}
             </ul>
-          </div>
+          )}
         </div>
-      )}
+      </div>
 
       <div className="p-block">
         <div className="p-block__head">Користувачі</div>
@@ -1743,7 +1827,7 @@ function UsersBanPanel() {
             <table className="panel-users">
               <thead>
                 <tr>
-                  <th>Ім'я</th>
+                  <th>ПІБ</th>
                   <th>Email</th>
                   <th>Посади</th>
                   <th>IP</th>
@@ -1760,7 +1844,7 @@ function UsersBanPanel() {
                     <td>{u.name}</td>
                     <td>{u.email ?? "—"}</td>
                     <td>{u.roles.join(", ") || "—"}</td>
-                    <td>{u.lastIp ?? "—"}</td>
+                    <td className="panel-users__ip">{u.lastIp ?? "—"}</td>
                     <td title={u.lastUa ?? ""}>{shortUa(u.lastUa)}</td>
                     <td>{fmtDate(u.createdAt)}</td>
                     <td>{fmtDate(u.lastSeen)}</td>

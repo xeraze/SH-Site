@@ -45,6 +45,8 @@ export interface ApplicationItem {
     age?: number | null;
     registeredAt?: string | null;
     bio?: string | null;
+    avatar?: string | null;
+    roles?: string[];
   };
 }
 
@@ -101,7 +103,13 @@ export interface AppointmentItem {
   createdAt: string;
   decidedAt: string | null;
   decisionNote: string | null;
-  author?: { id: string; name: string; email: string | null };
+  author?: {
+    id: string;
+    name: string;
+    email: string | null;
+    avatar?: string | null;
+    roles?: string[];
+  };
 }
 
 export interface DialogueMessage {
@@ -710,6 +718,22 @@ export async function saveAnnouncement(input: {
     body: input,
   });
   if (!res.ok) return { ok: false, error: res.error, freeAt: res.data.freeAt };
+  return { ok: true };
+}
+
+export async function deleteAppointment(
+  id: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const res = await apiFetch(`/api/appointments/${id}`, { method: "DELETE" });
+  if (!res.ok) return { ok: false, error: res.error };
+  return { ok: true };
+}
+
+export async function deleteApplication(
+  id: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const res = await apiFetch(`/api/applications/${id}`, { method: "DELETE" });
+  if (!res.ok) return { ok: false, error: res.error };
   return { ok: true };
 }
 

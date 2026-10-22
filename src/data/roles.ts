@@ -7,7 +7,7 @@ export const ROLE_LABELS_UI: Record<string, string> = {
   deputy_director: "Заступник директора",
   med_director: "Медичний директор",
   main_director: "Генеральний директор",
-  sysadmin: "sysadmin",
+  sysadmin: "Системний адміністратор",
 };
 
 export const ROLE_ICONS_UI: Record<string, string> = {
