@@ -48,6 +48,11 @@ export interface ApplicationItem {
     avatar?: string | null;
     roles?: string[];
   };
+  reviewer?: {
+    name: string;
+    avatar: string | null;
+  } | null;
+  dialogueClosedAt?: string | null;
 }
 
 export interface NotificationItem {
@@ -58,6 +63,12 @@ export interface NotificationItem {
   link: string | null;
   read: boolean;
   createdAt: string;
+}
+
+export interface AnnouncementDoc {
+  name: string;
+  url: string;
+  size: number;
 }
 
 export interface AnnouncementItem {
@@ -74,6 +85,7 @@ export interface AnnouncementItem {
   videoLinks: string[];
   bannerImage: string | null;
   bannerVideo: string | null;
+  documents: AnnouncementDoc[];
 }
 
 export interface PublicAnnouncement {
@@ -88,6 +100,7 @@ export interface PublicAnnouncement {
   videoLinks: string[];
   bannerImage: string | null;
   bannerVideo: string | null;
+  documents: AnnouncementDoc[];
   createdAt: string;
   likes: number;
   liked: boolean;
@@ -110,6 +123,11 @@ export interface AppointmentItem {
     avatar?: string | null;
     roles?: string[];
   };
+  operator?: {
+    name: string;
+    avatar: string | null;
+  } | null;
+  dialogueClosedAt?: string | null;
 }
 
 export interface DialogueMessage {
@@ -120,6 +138,8 @@ export interface DialogueMessage {
   senderName: string;
   isReviewer: boolean;
   imageUrl?: string | null;
+  videoUrl?: string | null;
+  doc?: { name: string; url: string; size: number } | null;
 }
 
 export interface InviteItem {
@@ -484,8 +504,8 @@ export async function markSeen(scope: "applications" | "appointments"): Promise<
 
 export async function fetchAppointmentMessages(
   id: string,
-): Promise<{ messages: DialogueMessage[]; status: string }> {
-  const res = await apiFetch<{ messages: DialogueMessage[]; status: string }>(
+): Promise<{ messages: DialogueMessage[]; status: string; dialogueClosed?: boolean }> {
+  const res = await apiFetch<{ messages: DialogueMessage[]; status: string; dialogueClosed?: boolean }>(
     `/api/appointments/${id}/messages`,
   );
   if (!res.ok) return { messages: [], status: "" };
@@ -496,10 +516,12 @@ export async function sendAppointmentMessage(
   id: string,
   body: string,
   imageUrl?: string,
+  videoUrl?: string,
+  doc?: { name: string; data: string },
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   const res = await apiFetch(`/api/appointments/${id}/messages`, {
     method: "POST",
-    body: { body, imageUrl },
+    body: { body, imageUrl, videoUrl, doc },
   });
   if (!res.ok) return { ok: false, error: res.error };
   return { ok: true };
@@ -598,8 +620,8 @@ export async function setApplicationStatus(
 
 export async function fetchMessages(
   id: string,
-): Promise<{ messages: DialogueMessage[]; status: string }> {
-  const res = await apiFetch<{ messages: DialogueMessage[]; status: string }>(
+): Promise<{ messages: DialogueMessage[]; status: string; dialogueClosed?: boolean }> {
+  const res = await apiFetch<{ messages: DialogueMessage[]; status: string; dialogueClosed?: boolean }>(
     `/api/applications/${id}/messages`,
   );
   if (!res.ok) return { messages: [], status: "" };
@@ -610,10 +632,12 @@ export async function sendMessage(
   id: string,
   body: string,
   imageUrl?: string,
+  videoUrl?: string,
+  doc?: { name: string; data: string },
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   const res = await apiFetch(`/api/applications/${id}/messages`, {
     method: "POST",
-    body: { body, imageUrl },
+    body: { body, imageUrl, videoUrl, doc },
   });
   if (!res.ok) return { ok: false, error: res.error };
   return { ok: true };
@@ -710,6 +734,7 @@ export async function saveAnnouncement(input: {
   videoLinks?: string[];
   bannerImage?: string;
   bannerVideo?: string;
+  documents?: ({ name: string; data: string } | { name: string; url: string; size: number })[];
   id?: string;
   active?: boolean;
 }): Promise<{ ok: true } | { ok: false; error: string; freeAt?: string }> {
@@ -855,6 +880,22 @@ export async function setAppointmentStatus(
     method: "POST",
     body: { status, note },
   });
+  if (!res.ok) return { ok: false, error: res.error };
+  return { ok: true };
+}
+
+export async function closeApplicationDialogue(
+  id: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const res = await apiFetch(`/api/applications/${id}/close-dialogue`, { method: "POST" });
+  if (!res.ok) return { ok: false, error: res.error };
+  return { ok: true };
+}
+
+export async function closeAppointmentDialogue(
+  id: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const res = await apiFetch(`/api/appointments/${id}/close-dialogue`, { method: "POST" });
   if (!res.ok) return { ok: false, error: res.error };
   return { ok: true };
 }

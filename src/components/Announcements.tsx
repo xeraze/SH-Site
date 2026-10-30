@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Icon } from "@iconify/react";
 import { AnnouncementBody } from "./AnnouncementBody";
+import { ChatDocCard } from "./ChatFiles";
 import { Link } from "./AppLink";
 import type { PublicAnnouncement } from "../api";
 import "./Announcements.css";
@@ -164,7 +165,10 @@ export function AnnouncementCard({
   const summary = item.summary ?? item.text;
   const hasBody = !isShort && item.text.trim().length > 0 && item.text !== summary;
   const hasExtraContent =
-    item.images.length > 0 || item.videoLinks.length > 0 || item.tags.length > 0;
+    item.images.length > 0 ||
+    item.videoLinks.length > 0 ||
+    item.tags.length > 0 ||
+    (item.documents?.length ?? 0) > 0;
   const hasMore = full && !isShort && (hasBody || hasExtraContent);
   const detail = `/oholoshennya/${item.id}`;
 
@@ -228,6 +232,13 @@ export function AnnouncementCard({
       )}
       {expanded &&
         item.videoLinks.map((link, i) => <VideoPreview key={`v${i}`} url={link} />)}
+      {expanded && (item.documents?.length ?? 0) > 0 && (
+        <div className="ann-card__docs">
+          {item.documents.map((d) => (
+            <ChatDocCard key={d.url} name={d.name} url={d.url} size={d.size} />
+          ))}
+        </div>
+      )}
       {expanded && item.tags.length > 0 && (
         <div className="ann-card__tags">
           {item.tags.map((t) => (

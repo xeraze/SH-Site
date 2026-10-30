@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Icon } from "@iconify/react";
 import {
   adminExportUser,
@@ -6,6 +6,8 @@ import {
   adminUserAction,
   announcementLink,
   assignRole,
+  closeApplicationDialogue,
+  closeAppointmentDialogue,
   copyText,
   deleteAnnouncement,
   deleteApplication,
@@ -37,6 +39,13 @@ import {
 } from "../api";
 import { PortalLayout } from "../components/PortalLayout";
 import { VideoPreview } from "../components/Announcements";
+import {
+  ChatDocCard,
+  compressImageForChat,
+  DOCS_MAX,
+  formatFileSize,
+  readDocDataUrl,
+} from "../components/ChatFiles";
 import { renderMiniMarkdown, stripShortFormatting } from "../components/annMarkdown";
 import {
   ROLE_LABELS_UI,
@@ -131,10 +140,16 @@ function ReviewChat({
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
   const [file, setFile] = useState<File | null>(null);
+  const [doc, setDoc] = useState<{ name: string; data: string } | null>(null);
+  const [videoUrl, setVideoUrl] = useState("");
+  const [videoOn, setVideoOn] = useState(false);
+  const [closedLocal, setClosedLocal] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     const res = await fetchMessages(app.id);
     setMessages(res.messages);
+    if (res.dialogueClosed) setClosedLocal(true);
   }, [app.id]);
 
   useEffect(() => {
@@ -153,27 +168,70 @@ function ReviewChat({
 
   const onSend = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!text.trim() && !file) return;
+    const video = videoUrl.trim();
+    if (!text.trim() && !file && !video && !doc) return;
+    if (video && !/^https?:\/\//i.test(video)) {
+      setErr("Некоректне посилання на відео");
+      return;
+    }
+    setErr(null);
     setSending(true);
     let imageUrl: string | undefined;
     if (file) {
-      const reader = new FileReader();
-      imageUrl = await new Promise((resolve) => {
-        reader.onload = () => resolve(reader.result as string);
-        reader.readAsDataURL(file);
-      });
+      try {
+        imageUrl = await compressImageForChat(file);
+      } catch {
+        setSending(false);
+        setErr("Не вдалося обробити зображення");
+        return;
+      }
     }
-    const res = await sendMessage(app.id, text.trim() || "📎", imageUrl);
+    const res = await sendMessage(
+      app.id,
+      text.trim() || "📎",
+      imageUrl,
+      video || undefined,
+      doc ?? undefined,
+    );
     setSending(false);
     if (res.ok) {
       setText("");
       setFile(null);
+      setDoc(null);
+      setVideoUrl("");
       void load();
       onChanged();
+    } else {
+      setErr(res.error);
     }
   };
 
   const decided = app.status === "accepted" || app.status === "rejected";
+  const closed = !!app.dialogueClosedAt || closedLocal;
+  const showDecisionButtons =
+    !decided && !open && (app.status === "reviewing" || app.status === "dialogue");
+  const decisionGate = useRef(0);
+
+  useLayoutEffect(() => {
+    if (showDecisionButtons) decisionGate.current = Date.now() + 400;
+  }, [showDecisionButtons]);
+
+  const decide = (status: string) => {
+    if (Date.now() < decisionGate.current) return;
+    onStatus(status, true);
+  };
+
+  const onCloseDialogue = async () => {
+    if (!window.confirm("Завершити діалог? Повторно відкрити його не можна.")) return;
+    setErr(null);
+    const res = await closeApplicationDialogue(app.id);
+    if (!res.ok) {
+      setErr(res.error);
+      return;
+    }
+    setClosedLocal(true);
+    onChanged();
+  };
 
   return (
     <>
@@ -184,14 +242,14 @@ function ReviewChat({
               <button
                 type="button"
                 className="cabinet-action cabinet-action--ok"
-                onClick={() => onStatus("accepted", true)}
+                onClick={() => decide("accepted")}
               >
                 Прийняти
               </button>
               <button
                 type="button"
                 className="cabinet-action cabinet-action--no"
-                onClick={() => onStatus("rejected", true)}
+                onClick={() => decide("rejected")}
               >
                 Відхилити
               </button>
@@ -206,6 +264,25 @@ function ReviewChat({
       >
         {open ? "Закрити чат" : "Діалог"}
       </button>
+      {!closed && !decided && (
+        <button
+          type="button"
+          className="cabinet-action cabinet-action--no"
+          onClick={() => void onCloseDialogue()}
+        >
+          Завершити діалог
+        </button>
+      )}
+      {err && (
+        <p className="cabinet-profile-error" style={{ width: "100%" }}>
+          {err}
+        </p>
+      )}
+      {closed && (
+        <div className="cabinet-apps__note" style={{ width: "100%" }}>
+          Діалог завершено
+        </div>
+      )}
       {open && (
         <div className="cabinet-chat cabinet-chat--wide">
           {messages.length === 0 ? (
@@ -227,34 +304,87 @@ function ReviewChat({
                   {m.imageUrl && (
                     <img src={m.imageUrl} alt="" className="cabinet-chat__img" />
                   )}
+                  {m.videoUrl && <VideoPreview url={m.videoUrl} />}
+                  {m.doc && (
+                    <ChatDocCard name={m.doc.name} url={m.doc.url} size={m.doc.size} />
+                  )}
                 </li>
               ))}
             </ul>
           )}
-          <form onSubmit={onSend} className="cabinet-chat__form">
-            <input
-              type="text"
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              placeholder="Відповісти пацієнту..."
-              maxLength={4000}
-            />
-            <label className="cabinet-chat__attach" title="Прикріпити зображення">
-              📎
+          {!decided && !closed && (
+            <form onSubmit={onSend} className="cabinet-chat__form">
               <input
-                type="file"
-                accept="image/*"
-                style={{ display: "none" }}
-                onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+                type="text"
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                placeholder="Відповісти пацієнту..."
+                maxLength={4000}
               />
-            </label>
-            {file && (
-              <span className="cabinet-chat__file">{file.name}</span>
-            )}
-            <button type="submit" className="portal-cta" disabled={sending}>
-              {sending ? "..." : "Надіслати"}
-            </button>
-          </form>
+              <label className="cabinet-chat__attach" title="Прикріпити зображення">
+                📎
+                <input
+                  type="file"
+                  accept="image/*"
+                  style={{ display: "none" }}
+                  onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+                />
+              </label>
+              <label className="cabinet-chat__attach" title="Прикріпити документ (PDF, TXT, DOC, DOCX)">
+                📄
+                <input
+                  type="file"
+                  accept=".pdf,.txt,.doc,.docx"
+                  style={{ display: "none" }}
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    e.target.value = "";
+                    if (!f) return;
+                    void readDocDataUrl(f)
+                      .then((data) => setDoc({ name: f.name, data }))
+                      .catch((er: Error) => setErr(er.message));
+                  }}
+                />
+              </label>
+              <button
+                type="button"
+                className="cabinet-chat__attach"
+                title="Додати відео за посиланням"
+                onClick={() => setVideoOn((v) => !v)}
+              >
+                <Icon icon="mdi:video-outline" width={18} height={18} />
+              </button>
+              {file && (
+                <span className="cabinet-chat__file">{file.name}</span>
+              )}
+              {doc && (
+                <span className="cabinet-chat__file">
+                  {doc.name} ({formatFileSize(Math.round((doc.data.length * 3) / 4))})
+                  <button
+                    type="button"
+                    className="cabinet-chat__file-remove"
+                    onClick={() => setDoc(null)}
+                  >
+                    <Icon icon="mdi:close-circle" width={16} height={16} />
+                  </button>
+                </span>
+              )}
+              <button type="submit" className="portal-cta" disabled={sending}>
+                {sending ? "..." : "Надіслати"}
+              </button>
+              {videoOn && (
+                <div className="cabinet-chat__video">
+                  <input
+                    type="text"
+                    value={videoUrl}
+                    onChange={(e) => setVideoUrl(e.target.value)}
+                    placeholder="Посилання на відео (YouTube, TikTok)..."
+                    maxLength={500}
+                  />
+                </div>
+              )}
+            </form>
+          )}
         </div>
       )}
     </>
@@ -290,8 +420,9 @@ function ReviewPanel({ kind }: { kind: "appeals" | "jobs" }) {
   const onStatus = async (id: string, status: string, needNote = false) => {
     let note: string | undefined;
     if (needNote) {
-      note = window.prompt("Причина / коментар (необов'язково):") ?? undefined;
-      if (note === null) return;
+      const raw = window.prompt("Причина / коментар (необов'язково):");
+      if (raw === null) return;
+      note = raw.trim() || undefined;
     }
     setMsg(null);
     const res = await setApplicationStatus(id, status, note);
@@ -377,6 +508,26 @@ function ReviewPanel({ kind }: { kind: "appeals" | "jobs" }) {
                     </div>
                   </div>
                 )}
+                {app.reviewer && (
+                  <div className="cabinet-apps__author">
+                    {app.reviewer.avatar ? (
+                      <img
+                        src={app.reviewer.avatar}
+                        alt=""
+                        className="cabinet-apps__avatar"
+                      />
+                    ) : (
+                      <div className="cabinet-apps__avatar cabinet-apps__avatar--empty">
+                        <Icon icon="mdi:account" width={20} height={20} />
+                      </div>
+                    )}
+                    <div className="cabinet-apps__author-info">
+                      <span className="cabinet-apps__date">
+                        Розглядає: {app.reviewer.name}
+                      </span>
+                    </div>
+                  </div>
+                )}
                 <ul className="cabinet-review-answers">
                   {app.answers.map((a, i) => (
                     <li key={i}>
@@ -451,11 +602,18 @@ function AppointmentsQueue() {
     return a.status === "accepted" || a.status === "rejected";
   });
 
+  const decisionGate = useRef(0);
+
   const onStatus = async (id: string, status: string, needNote = false) => {
+    if ((status === "accepted" || status === "rejected") && Date.now() < decisionGate.current) {
+      return;
+    }
+    decisionGate.current = Date.now() + 400;
     let note: string | undefined;
     if (needNote) {
-      note = window.prompt("Коментар для пацієнта (необов'язково):") ?? undefined;
-      if (note === null) return;
+      const raw = window.prompt("Коментар для пацієнта (необов'язково):");
+      if (raw === null) return;
+      note = raw.trim() || undefined;
     }
     setMsg(null);
     const res = await setAppointmentStatus(id, status, note);
@@ -539,6 +697,20 @@ function AppointmentsQueue() {
                     </div>
                   </div>
                 )}
+                {a.operator && (
+                  <div className="cabinet-apps__author">
+                    {a.operator.avatar ? (
+                      <img src={a.operator.avatar} alt="" className="cabinet-apps__avatar" />
+                    ) : (
+                      <div className="cabinet-apps__avatar cabinet-apps__avatar--empty">
+                        <Icon icon="mdi:account" width={20} height={20} />
+                      </div>
+                    )}
+                    <div className="cabinet-apps__author-info">
+                      <span className="cabinet-apps__date">Оператор: {a.operator.name}</span>
+                    </div>
+                  </div>
+                )}
                 <div className="cabinet-apps__date">Бажана дата: {a.wantDate}</div>
                 <div className="cabinet-review-answers">
                   <p>{a.body}</p>
@@ -548,7 +720,7 @@ function AppointmentsQueue() {
                     Причина: {a.decisionNote || "Не вказана"}
                   </div>
                 )}
-                <PanelAppointmentChat appointment={a} />
+                <PanelAppointmentChat appointment={a} onChanged={() => void load()} />
                 <div className="cabinet-review-actions">
                   {a.status === "new" && (
                     <button
@@ -828,6 +1000,9 @@ function AnnouncementsManage() {
   const [videoInput, setVideoInput] = useState("");
   const [bannerImage, setBannerImage] = useState<string | null>(null);
   const [bannerVideo, setBannerVideo] = useState("");
+  const [docs, setDocs] = useState<
+    { name: string; data?: string; url?: string; size: number }[]
+  >([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -1015,6 +1190,31 @@ function AnnouncementsManage() {
     setMsg(null);
   };
 
+  const onAddDoc = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    e.target.value = "";
+    if (files.length === 0) return;
+    setMsg(null);
+    void (async () => {
+      for (const file of files) {
+        if (docs.length >= DOCS_MAX) {
+          setMsg(`Максимум ${DOCS_MAX} документів`);
+          break;
+        }
+        try {
+          const data = await readDocDataUrl(file);
+          setDocs((prev) =>
+            prev.length < DOCS_MAX
+              ? [...prev, { name: file.name, data, size: Math.round((data.length * 3) / 4) }]
+              : prev,
+          );
+        } catch (err) {
+          setMsg(err instanceof Error ? err.message : "Не вдалося прочитати документ");
+        }
+      }
+    })();
+  };
+
   const parseTags = (raw: string): string[] =>
     raw
       .split(",")
@@ -1035,6 +1235,7 @@ function AnnouncementsManage() {
     setVideoInput("");
     setBannerImage(null);
     setBannerVideo("");
+    setDocs([]);
   };
 
   const onSave = async (e: React.FormEvent) => {
@@ -1069,6 +1270,14 @@ function AnnouncementsManage() {
         type === "regular" && visibility === "ads" && bannerVideo.trim()
           ? bannerVideo.trim()
           : undefined,
+      documents:
+        type === "regular" && visibility !== "ads"
+          ? docs.map((d) =>
+              d.data
+                ? { name: d.name, data: d.data }
+                : { name: d.name, url: d.url ?? "", size: d.size },
+            )
+          : [],
       id: editingId ?? undefined,
     });
     setSaving(false);
@@ -1117,6 +1326,7 @@ function AnnouncementsManage() {
       videoLinks: item.videoLinks,
       bannerImage: item.bannerImage ?? undefined,
       bannerVideo: item.bannerVideo ?? undefined,
+      documents: item.documents.map((d) => ({ name: d.name, url: d.url, size: d.size })),
       id: item.id,
       active: item.active !== 1,
     });
@@ -1136,6 +1346,7 @@ function AnnouncementsManage() {
     setVideoInput("");
     setBannerImage(item.bannerImage);
     setBannerVideo(item.bannerVideo ?? "");
+    setDocs(item.documents.map((d) => ({ name: d.name, url: d.url, size: d.size })));
     setMsg(null);
   };
 
@@ -1351,6 +1562,45 @@ function AnnouncementsManage() {
                   </button>
                 </span>
               )}
+            </div>
+          )}
+
+          {type === "regular" && visibility !== "ads" && (
+            <div className="cabinet-ann-images">
+              <label className="cabinet-avatar-upload">
+                Додати документи ({docs.length}/{DOCS_MAX})
+                <input
+                  type="file"
+                  accept=".pdf,.txt,.doc,.docx"
+                  multiple
+                  onChange={onAddDoc}
+                  hidden
+                  disabled={docs.length >= DOCS_MAX}
+                />
+              </label>
+              {docs.map((d, i) => (
+                <span key={`d${i}`} className="cabinet-ann-doc">
+                  <Icon
+                    icon={
+                      d.name.toLowerCase().endsWith(".pdf")
+                        ? "mdi:file-pdf-box"
+                        : d.name.toLowerCase().endsWith(".doc") || d.name.toLowerCase().endsWith(".docx")
+                          ? "mdi:file-word-outline"
+                          : "mdi:file-document-outline"
+                    }
+                    width={18}
+                    height={18}
+                  />
+                  {d.name} ({formatFileSize(d.size)})
+                  <button
+                    type="button"
+                    onClick={() => setDocs((prev) => prev.filter((_, j) => j !== i))}
+                    aria-label="Прибрати"
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
             </div>
           )}
 
@@ -1593,17 +1843,30 @@ function fmtDate(iso: string | null): string {
   return d.toLocaleString("uk-UA", { dateStyle: "short", timeStyle: "short" });
 }
 
-function PanelAppointmentChat({ appointment }: { appointment: AppointmentItem }) {
+function PanelAppointmentChat({
+  appointment,
+  onChanged,
+}: {
+  appointment: AppointmentItem;
+  onChanged: () => void;
+}) {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<DialogueMessage[]>([]);
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
   const [file, setFile] = useState<File | null>(null);
+  const [doc, setDoc] = useState<{ name: string; data: string } | null>(null);
+  const [videoUrl, setVideoUrl] = useState("");
+  const [videoOn, setVideoOn] = useState(false);
+  const [closedLocal, setClosedLocal] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
   const terminal = appointment.status === "accepted" || appointment.status === "rejected";
+  const dialogueClosed = !!appointment.dialogueClosedAt || closedLocal;
 
   const loadMessages = useCallback(async () => {
     const res = await fetchAppointmentMessages(appointment.id);
     setMessages(res.messages);
+    if (res.dialogueClosed) setClosedLocal(true);
   }, [appointment.id]);
 
   useEffect(() => {
@@ -1615,31 +1878,77 @@ function PanelAppointmentChat({ appointment }: { appointment: AppointmentItem })
 
   const onSend = async (e: React.FormEvent) => {
     e.preventDefault();
+    const video = videoUrl.trim();
     const body = text.trim();
-    if (!body && !file) return;
+    if (!body && !file && !video && !doc) return;
+    if (video && !/^https?:\/\//i.test(video)) {
+      setErr("Некоректне посилання на відео");
+      return;
+    }
+    setErr(null);
     setSending(true);
     let imageUrl: string | undefined;
     if (file) {
-      const reader = new FileReader();
-      imageUrl = await new Promise((resolve) => {
-        reader.onload = () => resolve(reader.result as string);
-        reader.readAsDataURL(file);
-      });
+      try {
+        imageUrl = await compressImageForChat(file);
+      } catch {
+        setSending(false);
+        setErr("Не вдалося обробити зображення");
+        return;
+      }
     }
-    const res = await sendAppointmentMessage(appointment.id, body || "📎", imageUrl);
+    const res = await sendAppointmentMessage(
+      appointment.id,
+      body || "📎",
+      imageUrl,
+      video || undefined,
+      doc ?? undefined,
+    );
     setSending(false);
-    if (!res.ok) return;
+    if (!res.ok) {
+      setErr(res.error);
+      return;
+    }
     setText("");
     setFile(null);
+    setDoc(null);
+    setVideoUrl("");
     await loadMessages();
+  };
+
+  const onCloseDialogue = async () => {
+    if (!window.confirm("Завершити діалог? Повторно відкрити його не можна.")) return;
+    setErr(null);
+    const res = await closeAppointmentDialogue(appointment.id);
+    if (!res.ok) {
+      setErr(res.error);
+      return;
+    }
+    setClosedLocal(true);
+    onChanged();
   };
 
   return (
     <div className="cabinet-chat">
       {!terminal && (
-        <button type="button" className="cabinet-chat__toggle" onClick={() => setOpen(!open)}>
-          {open ? "Закрити чат" : `Чат з пацієнтом (${messages.length || "відкрити"})`}
-        </button>
+        <div className="cabinet-chat__actions">
+          <button type="button" className="cabinet-chat__toggle" onClick={() => setOpen(!open)}>
+            {open ? "Закрити чат" : `Чат з пацієнтом (${messages.length || "відкрити"})`}
+          </button>
+          {!dialogueClosed && (
+            <button
+              type="button"
+              className="cabinet-action cabinet-action--no"
+              onClick={() => void onCloseDialogue()}
+            >
+              Завершити діалог
+            </button>
+          )}
+        </div>
+      )}
+      {err && <p className="cabinet-profile-error">{err}</p>}
+      {dialogueClosed && !terminal && (
+        <div className="cabinet-apps__note">Діалог завершено</div>
       )}
       {open && !terminal && (
         <div className="cabinet-chat__body">
@@ -1654,24 +1963,87 @@ function PanelAppointmentChat({ appointment }: { appointment: AppointmentItem })
                 {m.imageUrl && (
                   <img src={m.imageUrl} alt="" className="cabinet-chat__img" />
                 )}
+                {m.videoUrl && <VideoPreview url={m.videoUrl} />}
+                {m.doc && (
+                  <ChatDocCard name={m.doc.name} url={m.doc.url} size={m.doc.size} />
+                )}
                 <span className="cabinet-chat__date">
                   {new Date(m.createdAt + "Z").toLocaleString("uk-UA")}
                 </span>
               </li>
             ))}
           </ul>
-          <form onSubmit={onSend} className="cabinet-chat__form">
-            <input
-              type="text"
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              placeholder="Написати пацієнту..."
-              maxLength={4000}
-            />
-            <button type="submit" className="portal-cta" disabled={sending}>
-              {sending ? "..." : "Надіслати"}
-            </button>
-          </form>
+          {!terminal && !dialogueClosed && (
+            <form onSubmit={onSend} className="cabinet-chat__form">
+              <input
+                type="text"
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                placeholder="Написати пацієнту..."
+                maxLength={4000}
+              />
+              <label className="cabinet-chat__attach" title="Прикріпити зображення">
+                📎
+                <input
+                  type="file"
+                  accept="image/*"
+                  style={{ display: "none" }}
+                  onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+                />
+              </label>
+              <label className="cabinet-chat__attach" title="Прикріпити документ (PDF, TXT, DOC, DOCX)">
+                📄
+                <input
+                  type="file"
+                  accept=".pdf,.txt,.doc,.docx"
+                  style={{ display: "none" }}
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    e.target.value = "";
+                    if (!f) return;
+                    void readDocDataUrl(f)
+                      .then((data) => setDoc({ name: f.name, data }))
+                      .catch((er: Error) => setErr(er.message));
+                  }}
+                />
+              </label>
+              <button
+                type="button"
+                className="cabinet-chat__attach"
+                title="Додати відео за посиланням"
+                onClick={() => setVideoOn((v) => !v)}
+              >
+                <Icon icon="mdi:video-outline" width={18} height={18} />
+              </button>
+              {file && <span className="cabinet-chat__file">{file.name}</span>}
+              {doc && (
+                <span className="cabinet-chat__file">
+                  {doc.name} ({formatFileSize(Math.round((doc.data.length * 3) / 4))})
+                  <button
+                    type="button"
+                    className="cabinet-chat__file-remove"
+                    onClick={() => setDoc(null)}
+                  >
+                    <Icon icon="mdi:close-circle" width={16} height={16} />
+                  </button>
+                </span>
+              )}
+              <button type="submit" className="portal-cta" disabled={sending}>
+                {sending ? "..." : "Надіслати"}
+              </button>
+              {videoOn && (
+                <div className="cabinet-chat__video">
+                  <input
+                    type="text"
+                    value={videoUrl}
+                    onChange={(e) => setVideoUrl(e.target.value)}
+                    placeholder="Посилання на відео (YouTube, TikTok)..."
+                    maxLength={500}
+                  />
+                </div>
+              )}
+            </form>
+          )}
         </div>
       )}
     </div>
@@ -1763,9 +2135,10 @@ function UsersBanPanel() {
   };
 
   const onResolveRequest = async (req: AccountRequestItem, done: boolean) => {
-    const note = window.prompt("Причина / коментар (необов'язково):") ?? undefined;
-    if (note === null) return;
-    await run(req.userId, () => resolveAccountRequest(req.id, done, note || undefined));
+    const raw = window.prompt("Причина / коментар (необов'язково):");
+    if (raw === null) return;
+    const note = raw.trim() || undefined;
+    await run(req.userId, () => resolveAccountRequest(req.id, done, note));
   };
 
   if (loading) {

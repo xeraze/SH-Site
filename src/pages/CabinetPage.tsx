@@ -39,8 +39,16 @@ import {
 } from "../api";
 import { Link } from "../components/AppLink";
 import { PortalLayout } from "../components/PortalLayout";
+import { VideoPreview } from "../components/Announcements";
+import {
+  ChatDocCard,
+  compressImageForChat,
+  formatFileSize,
+  readDocDataUrl,
+} from "../components/ChatFiles";
 import { ROLE_ICONS_UI } from "../data/roles";
 import "./CabinetPage.css";
+import "../components/Announcements.css";
 
 function readHashToken(): string | null {
   const hash = window.location.hash.replace(/^#/, "");
@@ -863,10 +871,16 @@ function AppItem({ app }: { app: ApplicationItem }) {
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
   const [file, setFile] = useState<File | null>(null);
+  const [doc, setDoc] = useState<{ name: string; data: string } | null>(null);
+  const [videoUrl, setVideoUrl] = useState("");
+  const [videoOn, setVideoOn] = useState(false);
+  const [closedLocal, setClosedLocal] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
 
   const loadMessages = useCallback(async () => {
     const res = await fetchMessages(app.id);
     setMessages(res.messages);
+    if (res.dialogueClosed) setClosedLocal(true);
   }, [app.id]);
 
   useEffect(() => {
@@ -878,26 +892,49 @@ function AppItem({ app }: { app: ApplicationItem }) {
 
   const onSend = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!text.trim() && !file) return;
+    const video = videoUrl.trim();
+    if (!text.trim() && !file && !video && !doc) return;
+    if (video && !/^https?:\/\//i.test(video)) {
+      setErr("Некоректне посилання на відео");
+      return;
+    }
+    setErr(null);
     setSending(true);
     let imageUrl: string | undefined;
     if (file) {
-      const reader = new FileReader();
-      imageUrl = await new Promise((resolve) => {
-        reader.onload = () => resolve(reader.result as string);
-        reader.readAsDataURL(file);
-      });
+      try {
+        imageUrl = await compressImageForChat(file);
+      } catch {
+        setSending(false);
+        setErr("Не вдалося обробити зображення");
+        return;
+      }
     }
-    const res = await sendMessage(app.id, text.trim() || "📎", imageUrl);
+    const res = await sendMessage(
+      app.id,
+      text.trim() || "📎",
+      imageUrl,
+      video || undefined,
+      doc ?? undefined,
+    );
     setSending(false);
     if (res.ok) {
       setText("");
       setFile(null);
+      setDoc(null);
+      setVideoUrl("");
       void loadMessages();
+    } else {
+      setErr(res.error);
     }
   };
 
   const decided = app.status === "accepted" || app.status === "rejected";
+  const closed = !!app.dialogueClosedAt || closedLocal;
+
+  useEffect(() => {
+    if (closed) setOpen(false);
+  }, [closed]);
 
   return (
     <li className="cabinet-apps__item">
@@ -915,7 +952,7 @@ function AppItem({ app }: { app: ApplicationItem }) {
           Причина: {app.decisionNote || "Не вказана"}
         </div>
       )}
-      {!decided && (
+      {!decided && !closed && (
         <button
           type="button"
           className="cabinet-logout cabinet-chat-toggle"
@@ -924,7 +961,10 @@ function AppItem({ app }: { app: ApplicationItem }) {
           {open ? "Закрити діалог" : "Відкрити діалог"}
         </button>
       )}
-      {open && !decided && (
+      {!decided && closed && (
+        <div className="cabinet-apps__note">Діалог завершено</div>
+      )}
+      {open && !decided && !closed && (
         <div className="cabinet-chat">
           {messages.length === 0 ? (
             <p className="cabinet-chat__empty">Повідомлень ще немає.</p>
@@ -940,10 +980,15 @@ function AppItem({ app }: { app: ApplicationItem }) {
                   {m.imageUrl && (
                     <img src={m.imageUrl} alt="" className="cabinet-chat__img" />
                   )}
+                  {m.videoUrl && <VideoPreview url={m.videoUrl} />}
+                  {m.doc && (
+                    <ChatDocCard name={m.doc.name} url={m.doc.url} size={m.doc.size} />
+                  )}
                 </li>
               ))}
             </ul>
           )}
+          {err && <p className="cabinet-profile-error">{err}</p>}
           <form onSubmit={onSend} className="cabinet-chat__form">
             <input
               type="text"
@@ -961,10 +1006,57 @@ function AppItem({ app }: { app: ApplicationItem }) {
                 onChange={(e) => setFile(e.target.files?.[0] ?? null)}
               />
             </label>
+            <label className="cabinet-chat__attach" title="Прикріпити документ (PDF, TXT, DOC, DOCX)">
+              📄
+              <input
+                type="file"
+                accept=".pdf,.txt,.doc,.docx"
+                style={{ display: "none" }}
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  e.target.value = "";
+                  if (!f) return;
+                  void readDocDataUrl(f)
+                    .then((data) => setDoc({ name: f.name, data }))
+                    .catch((er: Error) => setErr(er.message));
+                }}
+              />
+            </label>
+            <button
+              type="button"
+              className="cabinet-chat__attach"
+              title="Додати відео за посиланням"
+              onClick={() => setVideoOn((v) => !v)}
+            >
+              <Icon icon="mdi:video-outline" width={18} height={18} />
+            </button>
             {file && <span className="cabinet-chat__file">{file.name}</span>}
+            {doc && (
+              <span className="cabinet-chat__file">
+                {doc.name} ({formatFileSize(Math.round((doc.data.length * 3) / 4))})
+                <button
+                  type="button"
+                  className="cabinet-chat__file-remove"
+                  onClick={() => setDoc(null)}
+                >
+                  <Icon icon="mdi:close-circle" width={16} height={16} />
+                </button>
+              </span>
+            )}
             <button type="submit" className="portal-cta" disabled={sending}>
               {sending ? "..." : "Надіслати"}
             </button>
+            {videoOn && (
+              <div className="cabinet-chat__video">
+                <input
+                  type="text"
+                  value={videoUrl}
+                  onChange={(e) => setVideoUrl(e.target.value)}
+                  placeholder="Посилання на відео (YouTube, TikTok)..."
+                  maxLength={500}
+                />
+              </div>
+            )}
           </form>
         </div>
       )}
@@ -978,11 +1070,19 @@ function AppointmentChat({ appointment }: { appointment: AppointmentItem }) {
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
   const [file, setFile] = useState<File | null>(null);
+  const [doc, setDoc] = useState<{ name: string; data: string } | null>(null);
+  const [videoUrl, setVideoUrl] = useState("");
+  const [videoOn, setVideoOn] = useState(false);
+  const [closedLocal, setClosedLocal] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
   const terminal = appointment.status === "accepted" || appointment.status === "rejected";
+  const dialogueClosed = !!appointment.dialogueClosedAt || closedLocal;
+  const closed = terminal || dialogueClosed;
 
   const loadMessages = useCallback(async () => {
     const res = await fetchAppointmentMessages(appointment.id);
     setMessages(res.messages);
+    if (res.dialogueClosed) setClosedLocal(true);
   }, [appointment.id]);
 
   useEffect(() => {
@@ -992,35 +1092,61 @@ function AppointmentChat({ appointment }: { appointment: AppointmentItem }) {
     return () => window.clearInterval(t);
   }, [open, loadMessages]);
 
+  useEffect(() => {
+    if (closed) setOpen(false);
+  }, [closed]);
+
   const onSend = async (e: React.FormEvent) => {
     e.preventDefault();
+    const video = videoUrl.trim();
     const body = text.trim();
-    if (!body && !file) return;
+    if (!body && !file && !video && !doc) return;
+    if (video && !/^https?:\/\//i.test(video)) {
+      setErr("Некоректне посилання на відео");
+      return;
+    }
+    setErr(null);
     setSending(true);
     let imageUrl: string | undefined;
     if (file) {
-      const reader = new FileReader();
-      imageUrl = await new Promise((resolve) => {
-        reader.onload = () => resolve(reader.result as string);
-        reader.readAsDataURL(file);
-      });
+      try {
+        imageUrl = await compressImageForChat(file);
+      } catch {
+        setSending(false);
+        setErr("Не вдалося обробити зображення");
+        return;
+      }
     }
-    const res = await sendAppointmentMessage(appointment.id, body || "📎", imageUrl);
+    const res = await sendAppointmentMessage(
+      appointment.id,
+      body || "📎",
+      imageUrl,
+      video || undefined,
+      doc ?? undefined,
+    );
     setSending(false);
-    if (!res.ok) return;
+    if (!res.ok) {
+      setErr(res.error);
+      return;
+    }
     setText("");
     setFile(null);
+    setDoc(null);
+    setVideoUrl("");
     await loadMessages();
   };
 
   return (
     <div className="cabinet-chat">
-      {!terminal && (
+      {!terminal && !dialogueClosed && (
         <button type="button" className="cabinet-chat__toggle" onClick={() => setOpen(!open)}>
           {open ? "Закрити чат" : "Чат з адміністрацією"}
         </button>
       )}
-      {open && !terminal && (
+      {!terminal && dialogueClosed && (
+        <div className="cabinet-apps__note">Діалог завершено</div>
+      )}
+      {open && !closed && (
         <div className="cabinet-chat__body">
           <ul className="cabinet-chat__list">
             {messages.map((m) => (
@@ -1033,12 +1159,17 @@ function AppointmentChat({ appointment }: { appointment: AppointmentItem }) {
                 {m.imageUrl && (
                   <img src={m.imageUrl} alt="" className="cabinet-chat__img" />
                 )}
+                {m.videoUrl && <VideoPreview url={m.videoUrl} />}
+                {m.doc && (
+                  <ChatDocCard name={m.doc.name} url={m.doc.url} size={m.doc.size} />
+                )}
                 <span className="cabinet-chat__date">
                   {new Date(m.createdAt + "Z").toLocaleString("uk-UA")}
                 </span>
               </li>
             ))}
           </ul>
+          {err && <p className="cabinet-profile-error">{err}</p>}
           <form onSubmit={onSend} className="cabinet-chat__form">
             <input
               type="text"
@@ -1056,10 +1187,57 @@ function AppointmentChat({ appointment }: { appointment: AppointmentItem }) {
                 onChange={(e) => setFile(e.target.files?.[0] ?? null)}
               />
             </label>
+            <label className="cabinet-chat__attach" title="Прикріпити документ (PDF, TXT, DOC, DOCX)">
+              📄
+              <input
+                type="file"
+                accept=".pdf,.txt,.doc,.docx"
+                style={{ display: "none" }}
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  e.target.value = "";
+                  if (!f) return;
+                  void readDocDataUrl(f)
+                    .then((data) => setDoc({ name: f.name, data }))
+                    .catch((er: Error) => setErr(er.message));
+                }}
+              />
+            </label>
+            <button
+              type="button"
+              className="cabinet-chat__attach"
+              title="Додати відео за посиланням"
+              onClick={() => setVideoOn((v) => !v)}
+            >
+              <Icon icon="mdi:video-outline" width={18} height={18} />
+            </button>
             {file && <span className="cabinet-chat__file">{file.name}</span>}
+            {doc && (
+              <span className="cabinet-chat__file">
+                {doc.name} ({formatFileSize(Math.round((doc.data.length * 3) / 4))})
+                <button
+                  type="button"
+                  className="cabinet-chat__file-remove"
+                  onClick={() => setDoc(null)}
+                >
+                  <Icon icon="mdi:close-circle" width={16} height={16} />
+                </button>
+              </span>
+            )}
             <button type="submit" className="portal-cta" disabled={sending}>
               {sending ? "..." : "Надіслати"}
             </button>
+            {videoOn && (
+              <div className="cabinet-chat__video">
+                <input
+                  type="text"
+                  value={videoUrl}
+                  onChange={(e) => setVideoUrl(e.target.value)}
+                  placeholder="Посилання на відео (YouTube, TikTok)..."
+                  maxLength={500}
+                />
+              </div>
+            )}
           </form>
         </div>
       )}

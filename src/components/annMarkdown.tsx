@@ -5,29 +5,72 @@ export function stripShortFormatting(text: string): string {
     .replace(/^#{1,6}\s*/gm, "")
     .replace(/\*\*([^*\n]+)\*\*/g, "$1")
     .replace(/\*([^*\n]+)\*/g, "$1")
+    .replace(/__([^_\n]+)__/g, "$1")
     .trim();
+}
+
+function findClose(text: string, from: number, delim: string): number {
+  const lineEnd = text.indexOf("\n", from);
+  const limit = lineEnd === -1 ? text.length : lineEnd;
+  let i = from;
+  while (i < limit) {
+    if (text.startsWith(delim, i)) {
+      const before = i > 0 ? text[i - 1] : "";
+      const after = text[i + delim.length] ?? "";
+      const loneStar = delim === "*" && before !== "*" && after !== "*";
+      const loneDouble = delim !== "*" && before !== delim[0];
+      if ((delim === "*" && loneStar) || (delim !== "*" && loneDouble)) {
+        return i;
+      }
+      i += delim.length;
+      continue;
+    }
+    i++;
+  }
+  return -1;
 }
 
 export function renderInline(text: string, keyPrefix: string): ReactNode[] {
   const nodes: ReactNode[] = [];
-  const re = /(\*\*[^*\n]+\*\*|\*[^*\n]+\*|__[^_\n]+__)/g;
-  let last = 0;
-  let m: RegExpExecArray | null;
+  let plain = "";
   let i = 0;
-  while ((m = re.exec(text)) !== null) {
-    if (m.index > last) nodes.push(text.slice(last, m.index));
-    const token = m[0];
-    const key = `${keyPrefix}-${i++}`;
-    if (token.startsWith("**")) {
-      nodes.push(<strong key={key}>{token.slice(2, -2)}</strong>);
-    } else if (token.startsWith("__")) {
-      nodes.push(<u key={key}>{token.slice(2, -2)}</u>);
-    } else {
-      nodes.push(<em key={key}>{token.slice(1, -1)}</em>);
+  let key = 0;
+
+  const flush = () => {
+    if (plain !== "") {
+      nodes.push(plain);
+      plain = "";
     }
-    last = m.index + token.length;
+  };
+
+  while (i < text.length) {
+    let delim: string | null = null;
+    if (text.startsWith("***", i)) delim = "***";
+    else if (text.startsWith("**", i)) delim = "**";
+    else if (text.startsWith("__", i)) delim = "__";
+    else if (text[i] === "*" && text[i + 1] !== "*") delim = "*";
+
+    if (delim) {
+      const contentStart = i + delim.length;
+      const close = findClose(text, contentStart, delim);
+      if (close > contentStart) {
+        const inner = text.slice(contentStart, close);
+        flush();
+        const key2 = `${keyPrefix}-${key++}`;
+        const content = renderInline(inner, key2);
+        if (delim === "***") {
+          nodes.push(<strong key={key2}><em>{content}</em></strong>);
+        } else if (delim === "**") nodes.push(<strong key={key2}>{content}</strong>);
+        else if (delim === "__") nodes.push(<u key={key2}>{content}</u>);
+        else nodes.push(<em key={key2}>{content}</em>);
+        i = close + delim.length;
+        continue;
+      }
+    }
+    plain += text[i];
+    i++;
   }
-  if (last < text.length) nodes.push(text.slice(last));
+  flush();
   return nodes;
 }
 

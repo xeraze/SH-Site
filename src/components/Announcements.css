@@ -150,6 +150,15 @@
   gap: 0.35rem;
   margin-top: 0.55rem;
 }
+.ann-card__docs {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-top: 0.55rem;
+}
+.ann-card__docs .chat-doc {
+  margin-top: 0;
+}
 .ann-tag {
   font-size: 0.75rem;
   padding: 0.1rem 0.5rem;
