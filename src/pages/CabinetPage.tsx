@@ -975,7 +975,7 @@ function AppItem({ app }: { app: ApplicationItem }) {
               value={text}
               onChange={(e) => setText(e.target.value)}
               placeholder="Написати повідомлення..."
-              maxLength={4000}
+              maxLength={2000}
             />
             <label className="cabinet-chat__attach" title="Прикріпити зображення">
               📎
@@ -1174,7 +1174,7 @@ function AppointmentChat({ appointment }: { appointment: AppointmentItem }) {
               value={text}
               onChange={(e) => setText(e.target.value)}
               placeholder="Написати повідомлення..."
-              maxLength={4000}
+              maxLength={2000}
             />
             <label className="cabinet-chat__attach" title="Прикріпити зображення">
               📎
@@ -1395,7 +1395,7 @@ function ProfileTab({
               value={bio}
               onChange={(e) => setBio(e.target.value)}
               placeholder="Коротко про себе (необов'язково)"
-              maxLength={500}
+              maxLength={300}
               rows={3}
             />
           </label>

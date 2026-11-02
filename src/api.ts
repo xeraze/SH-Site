@@ -442,8 +442,8 @@ export async function adminSetBan(
 
 export async function adminUserAction(
   id: string,
-  action: "warn" | "timeout" | "unblock" | "delete",
-  payload?: { reason?: string; hours?: number },
+  action: "warn" | "timeout" | "unblock" | "delete" | "remove_warning",
+  payload?: { reason?: string; hours?: number; warningId?: string },
 ): Promise<
   { ok: true; warnings?: number; blockedUntil?: string | null } | { ok: false; error: string }
 > {

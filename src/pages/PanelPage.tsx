@@ -334,7 +334,7 @@ function ReviewChat({
                         value={editingText}
                         onChange={(e) => setEditingText(e.target.value)}
                         rows={3}
-                        maxLength={4000}
+                        maxLength={2000}
                       />
                       <div className="cabinet-chat__edit-actions">
                         <button type="button" className="portal-cta" onClick={() => void saveEditedMessage(m.id)}>
@@ -368,18 +368,20 @@ function ReviewChat({
                       )}
                     </>
                   )}
-                  {m.isReviewer && (
+                  {(m.senderId === user?.id || user?.roles.includes("sysadmin")) && (
                     <div className="cabinet-chat__actions">
-                      <button
-                        type="button"
-                        className="cabinet-chat__action-btn"
-                        onClick={() => {
-                          setEditingMessageId(m.id);
-                          setEditingText(m.body || "");
-                        }}
-                      >
-                        Редагувати
-                      </button>
+                      {m.senderId === user?.id && (
+                        <button
+                          type="button"
+                          className="cabinet-chat__action-btn"
+                          onClick={() => {
+                            setEditingMessageId(m.id);
+                            setEditingText(m.body || "");
+                          }}
+                        >
+                          Редагувати
+                        </button>
+                      )}
                       <button
                         type="button"
                         className="cabinet-chat__action-btn cabinet-chat__action-btn--danger"
@@ -400,7 +402,7 @@ function ReviewChat({
                 value={text}
                 onChange={(e) => setText(e.target.value)}
                 placeholder="Відповісти пацієнту..."
-                maxLength={4000}
+                maxLength={2000}
               />
               <label className="cabinet-chat__attach" title="Прикріпити зображення">
                 📎
@@ -2207,7 +2209,7 @@ function PanelAppointmentChat({
                       value={editingText}
                       onChange={(e) => setEditingText(e.target.value)}
                       rows={3}
-                      maxLength={4000}
+                      maxLength={2000}
                     />
                     <div className="cabinet-chat__edit-actions">
                       <button type="button" className="portal-cta" onClick={() => void saveEditedMessage(m.id)}>
@@ -2241,18 +2243,20 @@ function PanelAppointmentChat({
                     )}
                   </>
                 )}
-                {m.isReviewer && (
+                {(m.senderId === user?.id || user?.roles.includes("sysadmin")) && (
                   <div className="cabinet-chat__actions">
-                    <button
-                      type="button"
-                      className="cabinet-chat__action-btn"
-                      onClick={() => {
-                        setEditingMessageId(m.id);
-                        setEditingText(m.body || "");
-                      }}
-                    >
-                      Редагувати
-                    </button>
+                    {m.senderId === user?.id && (
+                      <button
+                        type="button"
+                        className="cabinet-chat__action-btn"
+                        onClick={() => {
+                          setEditingMessageId(m.id);
+                          setEditingText(m.body || "");
+                        }}
+                      >
+                        Редагувати
+                      </button>
+                    )}
                     <button
                       type="button"
                       className="cabinet-chat__action-btn cabinet-chat__action-btn--danger"
@@ -2275,7 +2279,7 @@ function PanelAppointmentChat({
                 value={text}
                 onChange={(e) => setText(e.target.value)}
                 placeholder="Написати пацієнту..."
-                maxLength={4000}
+                maxLength={2000}
               />
               <label className="cabinet-chat__attach" title="Прикріпити зображення">
                 📎
@@ -2444,6 +2448,18 @@ function UsersBanPanel() {
     setWarnLoading(true);
     setWarnItems(await fetchUserWarnings(u.id));
     setWarnLoading(false);
+  };
+
+  const removeWarning = async (warningId: string) => {
+    if (!warnUser) return;
+    if (!window.confirm("Зняти це попередження?")) return;
+    const res = await adminUserAction(warnUser.id, "remove_warning", { warningId });
+    if (!res.ok) {
+      setErr(res.error ?? "Не вдалося зняти попередження");
+      return;
+    }
+    setWarnItems((items) => items.filter((item) => item.id !== warningId));
+    await load();
   };
 
   useEffect(() => {
@@ -2981,6 +2997,13 @@ function UsersBanPanel() {
                       </span>
                       <span className="audit-list__actor">{w.issuedBy?.name ?? "—"}</span>
                       {w.reason && <span className="audit-list__details">{w.reason}</span>}
+                      <button
+                        type="button"
+                        className="cabinet-chat__action-btn cabinet-chat__action-btn--danger"
+                        onClick={() => void removeWarning(w.id)}
+                      >
+                        Зняти
+                      </button>
                     </li>
                   ))}
                 </ul>
