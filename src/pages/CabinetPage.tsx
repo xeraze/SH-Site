@@ -11,6 +11,7 @@ import {
   fetchMe,
   fetchMessages,
   fetchSessions,
+  fetchSettings,
   fetchUnread,
   getToken,
   googleLinkStart,
@@ -36,6 +37,8 @@ import {
   type DialogueMessage,
   type PublicUser,
   type SessionItem,
+  type SettingsData,
+  type SettingsField,
 } from "../api";
 import { Link } from "../components/AppLink";
 import { PortalLayout } from "../components/PortalLayout";
@@ -49,6 +52,9 @@ import {
 import { ROLE_ICONS_UI } from "../data/roles";
 import "./CabinetPage.css";
 import "../components/Announcements.css";
+
+const ROBLOX_USERNAME_RE = /^[A-Za-z0-9_]{3,20}$/;
+const DISCORD_USERNAME_RE = /^[A-Za-z0-9_.]{2,32}(?:#\d{4})?$/;
 
 function readHashToken(): string | null {
   const hash = window.location.hash.replace(/^#/, "");
@@ -84,11 +90,6 @@ function AuthBox({
   const [mode, setMode] = useState<"login" | "register">("login");
   const [step, setStep] = useState<"form" | "code">("form");
   const [email, setEmail] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [firstName, setFirstName] = useState("");
-  const [patronymic, setPatronymic] = useState("");
-  const [gender, setGender] = useState("");
-  const [age, setAge] = useState("");
   const [password, setPassword] = useState("");
   const [code, setCode] = useState("");
   const [challengeId, setChallengeId] = useState<string | null>(null);
@@ -142,11 +143,6 @@ function AuthBox({
     }
     const res = await registerStart({
       email: cleanEmail,
-      firstName: firstName.trim(),
-      lastName: lastName.trim(),
-      patronymic: patronymic.trim(),
-      gender,
-      age: Number(age),
       password,
     });
     setBusy(false);
@@ -248,57 +244,11 @@ function AuthBox({
 
             {mode === "register" && (
               <>
-                <label className="apps-field">
-                  <span className="apps-field__label">
-                    Прізвище<em>*</em>
-                  </span>
-                  <input value={lastName} onChange={(e) => setLastName(e.target.value)} required />
-                </label>
-                <label className="apps-field">
-                  <span className="apps-field__label">
-                    Ім'я<em>*</em>
-                  </span>
-                  <input value={firstName} onChange={(e) => setFirstName(e.target.value)} required />
-                </label>
-                <label className="apps-field">
-                  <span className="apps-field__label">
-                    По батькові<em>*</em>
-                  </span>
-                  <input value={patronymic} onChange={(e) => setPatronymic(e.target.value)} required />
-                </label>
-                <label className="apps-field">
-                  <span className="apps-field__label">
-                    Стать<em>*</em>
-                  </span>
-                  <select value={gender} onChange={(e) => setGender(e.target.value)} required>
-                    <option value="" disabled>
-                      Оберіть...
-                    </option>
-                    <option value="male">Чоловіча</option>
-                    <option value="female">Жіноча</option>
-                  </select>
-                </label>
-                <label className="apps-field">
-                  <span className="apps-field__label">
-                    Вік<em>*</em>
-                  </span>
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    pattern="[0-9]{1,2}"
-                    maxLength={2}
-                    placeholder="Напр. 25"
-                    value={age}
-                    onChange={(e) => {
-                      const digits = e.target.value.replace(/\D/g, "").slice(0, 2);
-                      setAge(digits);
-                    }}
-                    required
-                  />
-                </label>
                 <p className="cabinet-auth-note">
-                  На вказаний email надійде 6-значний код підтвердження — введіть
-                  його, щоб завершити реєстрацію.
+                  Після підтвердження пошти акаунт буде створено, а система
+                  одноразово переведе вас до заповнення обов&apos;язкового профілю:
+                  прізвище, ім&apos;я, по батькові, вік, Roblox Username і за бажанням
+                  Discord Username та інформація про себе.
                 </p>
               </>
             )}
@@ -539,7 +489,8 @@ export function CabinetPage() {
 
   const AP_STATUS_UI: Record<string, string> = {
     new: "Нова",
-    in_progress: "У роботі",
+    in_progress: "На розгляді",
+    dialogue: "Діалог",
     accepted: "Прийнята",
     rejected: "Відхилена",
   };
@@ -612,6 +563,8 @@ export function CabinetPage() {
           onSaved={(updated) => {
             setUser(updated);
             void fetchApplications().then(setApplications);
+            void fetchAppointments().then(setAppointments);
+            void loadUnread();
           }}
         />
       ) : (
@@ -680,8 +633,13 @@ export function CabinetPage() {
           <ul className="p-list">
             <li>Гість — переглядає сайт, але не може подавати заявки.</li>
             <li>
-              Реєстрація: вкажіть email, пароль, ПІБ, стать і вік — на пошту
-              надійде 6-значний код підтвердження.
+              Реєстрація: вкажіть лише email і пароль — на пошту надійде
+              6-значний код підтвердження.
+            </li>
+            <li>
+              Після першого входу або після оновлення системи вас одноразово
+              попросять заповнити обов&apos;язковий профіль. Поки Roblox Username не
+              буде вказано, подання заявок та записів недоступне.
             </li>
             <li>
               Вхід: email і пароль (підтверджується кодом на пошту) або
@@ -931,6 +889,7 @@ function AppItem({ app }: { app: ApplicationItem }) {
 
   const decided = app.status === "accepted" || app.status === "rejected";
   const closed = !!app.dialogueClosedAt || closedLocal;
+  const chatAvailable = !decided && !closed && app.status !== "new";
 
   useEffect(() => {
     if (closed) setOpen(false);
@@ -952,7 +911,7 @@ function AppItem({ app }: { app: ApplicationItem }) {
           Причина: {app.decisionNote || "Не вказана"}
         </div>
       )}
-      {!decided && !closed && (
+      {chatAvailable && (
         <button
           type="button"
           className="cabinet-logout cabinet-chat-toggle"
@@ -961,14 +920,29 @@ function AppItem({ app }: { app: ApplicationItem }) {
           {open ? "Закрити діалог" : "Відкрити діалог"}
         </button>
       )}
+      {!decided && !closed && !chatAvailable && (
+        <div className="cabinet-apps__note">Діалог відкриється після початку розгляду</div>
+      )}
       {!decided && closed && (
         <div className="cabinet-apps__note">Діалог завершено</div>
       )}
-      {open && !decided && !closed && (
-        <div className="cabinet-chat">
-          {messages.length === 0 ? (
-            <p className="cabinet-chat__empty">Повідомлень ще немає.</p>
-          ) : (
+      {open && chatAvailable && (
+        <div className="chat-modal-overlay" onClick={() => setOpen(false)}>
+          <div className="chat-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="chat-modal__head">
+              <strong>Діалог — {app.formTitle}</strong>
+              <button
+                type="button"
+                className="profile-modal__close"
+                onClick={() => setOpen(false)}
+              >
+                ×
+              </button>
+            </div>
+            <div className="chat-modal__body">
+              {messages.length === 0 ? (
+                <p className="cabinet-chat__empty">Повідомлень ще немає.</p>
+              ) : (
             <ul className="cabinet-chat__list">
               {messages.map((m) => (
                 <li
@@ -1058,6 +1032,8 @@ function AppItem({ app }: { app: ApplicationItem }) {
               </div>
             )}
           </form>
+            </div>
+          </div>
         </div>
       )}
     </li>
@@ -1078,6 +1054,7 @@ function AppointmentChat({ appointment }: { appointment: AppointmentItem }) {
   const terminal = appointment.status === "accepted" || appointment.status === "rejected";
   const dialogueClosed = !!appointment.dialogueClosedAt || closedLocal;
   const closed = terminal || dialogueClosed;
+  const chatAvailable = !terminal && !dialogueClosed && appointment.status !== "new";
 
   const loadMessages = useCallback(async () => {
     const res = await fetchAppointmentMessages(appointment.id);
@@ -1138,16 +1115,31 @@ function AppointmentChat({ appointment }: { appointment: AppointmentItem }) {
 
   return (
     <div className="cabinet-chat">
-      {!terminal && !dialogueClosed && (
+      {chatAvailable && (
         <button type="button" className="cabinet-chat__toggle" onClick={() => setOpen(!open)}>
           {open ? "Закрити чат" : "Чат з адміністрацією"}
         </button>
       )}
+      {!terminal && !dialogueClosed && appointment.status === "new" && (
+        <div className="cabinet-apps__note">Діалог відкриється після початку розгляду</div>
+      )}
       {!terminal && dialogueClosed && (
         <div className="cabinet-apps__note">Діалог завершено</div>
       )}
-      {open && !closed && (
-        <div className="cabinet-chat__body">
+      {open && chatAvailable && (
+        <div className="chat-modal-overlay" onClick={() => setOpen(false)}>
+          <div className="chat-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="chat-modal__head">
+              <strong>Діалог — запис на прийом</strong>
+              <button
+                type="button"
+                className="profile-modal__close"
+                onClick={() => setOpen(false)}
+              >
+                ×
+              </button>
+            </div>
+            <div className="chat-modal__body">
           <ul className="cabinet-chat__list">
             {messages.map((m) => (
               <li
@@ -1239,6 +1231,8 @@ function AppointmentChat({ appointment }: { appointment: AppointmentItem }) {
               </div>
             )}
           </form>
+            </div>
+          </div>
         </div>
       )}
     </div>
@@ -1258,6 +1252,8 @@ function ProfileTab({
   const [gender, setGender] = useState(user.gender ?? "");
   const [age, setAge] = useState(user.age ? String(user.age) : "");
   const [bio, setBio] = useState(user.bio ?? "");
+  const [discordUsername, setDiscordUsername] = useState(user.discordUsername ?? "");
+  const [robloxUsername, setRobloxUsername] = useState(user.robloxUsername ?? "");
   const [avatar, setAvatar] = useState<string | null>(user.avatar);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -1277,6 +1273,16 @@ function ProfileTab({
 
   const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    const roblox = robloxUsername.trim();
+    if (!ROBLOX_USERNAME_RE.test(roblox)) {
+      setError("Roblox Username: 3–20 символів, латиниця, цифри та «_»");
+      return;
+    }
+    const discord = discordUsername.trim();
+    if (discord && !DISCORD_USERNAME_RE.test(discord)) {
+      setError("Некоректний Discord Username");
+      return;
+    }
     setSaving(true);
     setError(null);
     setOkMsg(null);
@@ -1288,6 +1294,8 @@ function ProfileTab({
       age: Number(age),
       avatar,
       bio,
+      discordUsername: discord,
+      robloxUsername: roblox,
     });
     setSaving(false);
     if (!res.ok) {
@@ -1385,6 +1393,27 @@ function ProfileTab({
               rows={3}
             />
           </label>
+          <label className="apps-field">
+            <span className="apps-field__label">Roblox Username<em>*</em></span>
+            <input
+              type="text"
+              value={robloxUsername}
+              onChange={(e) => setRobloxUsername(e.target.value)}
+              placeholder="Ваш Roblox Username (не дисплей-нікнейм)"
+              maxLength={20}
+              required
+            />
+          </label>
+          <label className="apps-field">
+            <span className="apps-field__label">Discord Username</span>
+            <input
+              type="text"
+              value={discordUsername}
+              onChange={(e) => setDiscordUsername(e.target.value)}
+              placeholder="Ваш Discord Username (необов'язково)"
+              maxLength={40}
+            />
+          </label>
           {error && <p className="cabinet-profile-error">{error}</p>}
           {okMsg && <p className="cabinet-auth-msg cabinet-auth-msg--ok">{okMsg}</p>}
           <button type="submit" className="portal-cta" disabled={saving}>
@@ -1422,30 +1451,71 @@ function EmailNotifBlock({
   user: PublicUser;
   onUserUpdated: (u: PublicUser) => void;
 }) {
-  const [emailOn, setEmailOn] = useState(user.emailNotifications);
+  const [settings, setSettings] = useState<SettingsData | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const onChange = async (checked: boolean) => {
-    setEmailOn(checked);
+  useEffect(() => {
+    void fetchSettings().then(setSettings);
+  }, []);
+
+  const toggle = async (field: SettingsField, value: boolean) => {
+    if (!settings) return;
+    setSettings({ ...settings, [field]: value });
     setSaving(true);
-    await saveSettings(checked);
+    const saved = await saveSettings({ [field]: value });
     setSaving(false);
-    onUserUpdated({ ...user, emailNotifications: checked });
+    if (saved) setSettings(saved);
+    if (field === "emailNotifications") {
+      onUserUpdated({ ...user, emailNotifications: value });
+    }
   };
+
+  const isReviewer = user.roles.some((r) =>
+    ["sysadmin", "main_director", "med_director", "deputy_director"].includes(r),
+  );
+  const isOperator = user.roles.some((r) => r === "sysadmin" || r === "operator");
+
+  const row = (field: SettingsField, label: string) => (
+    <label className="cabinet-settings__row" key={field}>
+      <input
+        type="checkbox"
+        checked={settings?.[field] ?? true}
+        onChange={(e) => void toggle(field, e.target.checked)}
+        disabled={saving || !settings}
+      />
+      <span>{label}</span>
+    </label>
+  );
 
   return (
     <div className="p-block">
       <div className="p-block__head">Сповіщення на пошту</div>
       <div className="p-block__body cabinet-settings">
-        <label className="cabinet-settings__row">
-          <input
-            type="checkbox"
-            checked={emailOn}
-            onChange={(e) => void onChange(e.target.checked)}
-            disabled={saving}
-          />
-          <span>Отримувати сповіщення на пошту про статус заявок</span>
-        </label>
+        {row("emailNotifications", "Отримувати сповіщення на пошту про статус заявок")}
+        {isReviewer && (
+          <>
+            <p className="cabinet-settings__group">Звернення</p>
+            {row("notifyNewApplication", "Нове звернення (пацієнт надіслав заявку)")}
+            {row(
+              "notifyApplicationDialogue",
+              "Нове повідомлення пацієнта у діалозі звернення",
+            )}
+            <p className="cabinet-settings__group">Заявки на посаду</p>
+            {row("notifyNewJob", "Нова заявка на посаду")}
+            {row("notifyJobDialogue", "Нове повідомлення у діалозі заявки на посаду")}
+          </>
+        )}
+        {isOperator && (
+          <>
+            <p className="cabinet-settings__group">Записи на прийом</p>
+            {row("notifyNewAppointment", "Новий запис на прийом")}
+            {row(
+              "notifyAppointmentDialogue",
+              "Нове повідомлення пацієнта у діалозі запису",
+            )}
+          </>
+        )}
+        {saving && <p className="cabinet-profile-note">Збереження...</p>}
       </div>
     </div>
   );
@@ -1914,6 +1984,8 @@ function ProfileForm({
   const [patronymic, setPatronymic] = useState(user.patronymic ?? "");
   const [gender, setGender] = useState(user.gender ?? "");
   const [age, setAge] = useState(user.age ? String(user.age) : "");
+  const [discordUsername, setDiscordUsername] = useState(user.discordUsername ?? "");
+  const [robloxUsername, setRobloxUsername] = useState(user.robloxUsername ?? "");
   const [avatar, setAvatar] = useState<string | null>(user.avatar);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -1932,6 +2004,16 @@ function ProfileForm({
 
   const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    const roblox = robloxUsername.trim();
+    if (!ROBLOX_USERNAME_RE.test(roblox)) {
+      setError("Roblox Username: 3–20 символів, латиниця, цифри та «_»");
+      return;
+    }
+    const discord = discordUsername.trim();
+    if (discord && !DISCORD_USERNAME_RE.test(discord)) {
+      setError("Некоректний Discord Username");
+      return;
+    }
     setSaving(true);
     setError(null);
     const res = await saveProfile({
@@ -1941,6 +2023,8 @@ function ProfileForm({
       gender,
       age: Number(age),
       avatar,
+      discordUsername: discord,
+      robloxUsername: roblox,
     });
     setSaving(false);
     if (!res.ok) {
@@ -1955,8 +2039,8 @@ function ProfileForm({
       <div className="p-block__head p-block__head--teal">Заповніть профіль</div>
       <div className="p-block__body">
         <p className="cabinet-profile-note">
-          Вкажіть ПІБ українською, стать та вік — інакше подача заявок
-          недоступна.
+          Вкажіть ПІБ українською, стать, вік та Roblox Username — інакше користування
+          порталом обмежено.
         </p>
         <form onSubmit={onSubmit} className="cabinet-profile-form">
           <label className="apps-field">
@@ -2024,6 +2108,29 @@ function ProfileForm({
                 setAge(digits);
               }}
               required
+            />
+          </label>
+          <label className="apps-field">
+            <span className="apps-field__label">
+              Roblox Username<em>*</em>
+            </span>
+            <input
+              type="text"
+              value={robloxUsername}
+              onChange={(e) => setRobloxUsername(e.target.value)}
+              placeholder="Ваш Roblox Username (не дисплей-нікнейм)"
+              maxLength={20}
+              required
+            />
+          </label>
+          <label className="apps-field">
+            <span className="apps-field__label">Discord Username</span>
+            <input
+              type="text"
+              value={discordUsername}
+              onChange={(e) => setDiscordUsername(e.target.value)}
+              placeholder="Ваш Discord Username (необов'язково)"
+              maxLength={40}
             />
           </label>
           <div className="cabinet-avatar-field">

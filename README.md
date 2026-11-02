@@ -2,7 +2,7 @@
 
 # Official Sloboda Hospital Web Portal
 
-![Site preview](public/preview.png)
+![Site preview](public/preview.jpg)
 
 </div>
 

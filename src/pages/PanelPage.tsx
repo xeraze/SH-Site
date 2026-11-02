@@ -19,9 +19,11 @@ import {
   fetchApplicationsReview,
   fetchAppointmentMessages,
   fetchAppointmentsQueue,
+  fetchAuditLog,
   fetchInvites,
   fetchMessages,
   fetchMe,
+  fetchUserWarnings,
   resolveAccountRequest,
   saveAnnouncement,
   sendAppointmentMessage,
@@ -33,12 +35,15 @@ import {
   type AdminUserItem,
   type ApplicationItem,
   type AppointmentItem,
+  type AuditEntry,
   type DialogueMessage,
   type InviteItem,
   type PublicUser,
+  type WarningHistoryItem,
 } from "../api";
 import { PortalLayout } from "../components/PortalLayout";
 import { VideoPreview } from "../components/Announcements";
+import { ProfileModal, type ProfileUser } from "../components/ProfileModal";
 import {
   ChatDocCard,
   compressImageForChat,
@@ -49,80 +54,44 @@ import {
 import { renderMiniMarkdown, stripShortFormatting } from "../components/annMarkdown";
 import {
   ROLE_LABELS_UI,
-  ROLE_ICONS_UI,
   REVIEWER_ROLES_UI,
   ASSIGNER_ROLES_UI,
   MANAGE_ANN_ROLES_UI,
   APPOINTMENT_REVIEW_ROLES_UI,
   hasAnyRole,
 } from "../data/roles";
+import { formatUa } from "../utils/userAgent";
 import "./CabinetPage.css";
 import "../components/Announcements.css";
 
 const APPOINTMENT_STATUS_LABELS_UI: Record<string, string> = {
   new: "Нова",
-  in_progress: "У роботі",
+  in_progress: "На розгляді",
+  dialogue: "Діалог",
   accepted: "Прийнята",
   rejected: "Відхилена",
 };
 
-type PanelTab = "appeals" | "jobs" | "callcenter" | "constructor" | "roles" | "users";
+const AUDIT_ACTION_LABELS: Record<string, string> = {
+  "application.create": "Подання звернення",
+  warn: "Попередження",
+  "warn.block": "Попередження (з блокуванням)",
+  timeout: "Тимчасова блокування",
+  unblock: "Розблокування",
+  "user.ban": "Блокування акаунта",
+  "user.unban": "Розблокування акаунта",
+  "user.delete": "Видалення акаунта",
+  "role.assign": "Надано посаду",
+  "invite.create": "Надіслано запрошення",
+  "application.status": "Рішення за зверненням",
+  "application.dialogue_close": "Діалог за зверненням завершено",
+  "appointment.create": "Подання запису на прийом",
+  "appointment.status": "Рішення за записом",
+  "appointment.dialogue_close": "Діалог за записом завершено",
+  "account_request.resolve": "Запит на експорт / видалення",
+};
 
-function ProfileModal({
-  author,
-  onClose,
-}: {
-  author: NonNullable<ApplicationItem["author"]>;
-  onClose: () => void;
-}) {
-  const roles = (author.roles ?? []).filter((r) => r !== "sysadmin");
-  return (
-    <div className="profile-modal-overlay" onClick={onClose}>
-      <div className="profile-modal" onClick={(e) => e.stopPropagation()}>
-        <div className="profile-modal__head">
-          <strong>Профіль</strong>
-          <button type="button" className="profile-modal__close" onClick={onClose}>
-            ×
-          </button>
-        </div>
-        <div className="profile-modal__body">
-          <div className="profile-modal__header">
-            {author.avatar ? (
-              <img src={author.avatar} alt="" className="profile-modal__avatar" />
-            ) : (
-              <div className="profile-modal__avatar profile-modal__avatar--empty">
-                <Icon icon="mdi:account" width={32} height={32} />
-              </div>
-            )}
-            <div>
-              <p className="profile-modal__name">{author.name}</p>
-              {roles.length > 0 && (
-                <span className="cabinet-role-badges">
-                  {roles.map((r) => (
-                    <span key={r} className="cabinet-role-icon" title={ROLE_LABELS_UI[r] ?? r}>
-                      <Icon icon={ROLE_ICONS_UI[r] ?? "mdi:account"} width={16} height={16} />
-                    </span>
-                  ))}
-                </span>
-              )}
-            </div>
-          </div>
-          <p><strong>Email:</strong> {author.email ?? "—"}</p>
-          {author.age != null && <p><strong>Вік:</strong> {author.age}</p>}
-          {author.registeredAt && (
-            <p>
-              <strong>Реєстрація:</strong>{" "}
-              {new Date(author.registeredAt + "Z").toLocaleDateString("uk-UA")}
-            </p>
-          )}
-          {author.bio && (
-            <p><strong>Про себе:</strong> {author.bio}</p>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
+type PanelTab = "appeals" | "jobs" | "callcenter" | "constructor" | "roles" | "users";
 
 function ReviewChat({
   app,
@@ -208,8 +177,7 @@ function ReviewChat({
 
   const decided = app.status === "accepted" || app.status === "rejected";
   const closed = !!app.dialogueClosedAt || closedLocal;
-  const showDecisionButtons =
-    !decided && !open && (app.status === "reviewing" || app.status === "dialogue");
+  const showDecisionButtons = !decided && !open;
   const decisionGate = useRef(0);
 
   useLayoutEffect(() => {
@@ -219,6 +187,12 @@ function ReviewChat({
   const decide = (status: string) => {
     if (Date.now() < decisionGate.current) return;
     onStatus(status, true);
+  };
+
+  const onStartDialogue = () => {
+    if (Date.now() < decisionGate.current) return;
+    onStatus("dialogue", false);
+    setOpen(true);
   };
 
   const onCloseDialogue = async () => {
@@ -237,34 +211,41 @@ function ReviewChat({
     <>
       {!decided && !open && (
         <div className="cabinet-review-actions" style={{ marginBottom: "0.5rem" }}>
-          {(app.status === "reviewing" || app.status === "dialogue") && (
-            <>
-              <button
-                type="button"
-                className="cabinet-action cabinet-action--ok"
-                onClick={() => decide("accepted")}
-              >
-                Прийняти
-              </button>
-              <button
-                type="button"
-                className="cabinet-action cabinet-action--no"
-                onClick={() => decide("rejected")}
-              >
-                Відхилити
-              </button>
-            </>
+          <button
+            type="button"
+            className="cabinet-action cabinet-action--ok"
+            onClick={() => decide("accepted")}
+          >
+            Прийняти
+          </button>
+          <button
+            type="button"
+            className="cabinet-action cabinet-action--no"
+            onClick={() => decide("rejected")}
+          >
+            Відхилити
+          </button>
+          {app.status === "reviewing" && (
+            <button
+              type="button"
+              className="cabinet-action cabinet-action--dialogue"
+              onClick={onStartDialogue}
+            >
+              Почати діалог
+            </button>
+          )}
+          {app.status === "dialogue" && !closed && (
+            <button
+              type="button"
+              className="cabinet-action cabinet-action--dialogue"
+              onClick={() => setOpen(true)}
+            >
+              Діалог
+            </button>
           )}
         </div>
       )}
-      <button
-        type="button"
-        className="cabinet-action cabinet-action--dialogue"
-        onClick={() => setOpen((v) => !v)}
-      >
-        {open ? "Закрити чат" : "Діалог"}
-      </button>
-      {!closed && !decided && (
+      {!closed && !decided && app.status === "dialogue" && (
         <button
           type="button"
           className="cabinet-action cabinet-action--no"
@@ -284,7 +265,19 @@ function ReviewChat({
         </div>
       )}
       {open && (
-        <div className="cabinet-chat cabinet-chat--wide">
+        <div className="chat-modal-overlay" onClick={() => setOpen(false)}>
+          <div className="chat-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="chat-modal__head">
+              <strong>Діалог — {app.formTitle}</strong>
+              <button
+                type="button"
+                className="profile-modal__close"
+                onClick={() => setOpen(false)}
+              >
+                ×
+              </button>
+            </div>
+            <div className="chat-modal__body">
           {messages.length === 0 ? (
             <p className="cabinet-chat__empty">Повідомлень ще немає.</p>
           ) : (
@@ -385,6 +378,8 @@ function ReviewChat({
               )}
             </form>
           )}
+            </div>
+          </div>
         </div>
       )}
     </>
@@ -395,9 +390,7 @@ function ReviewPanel({ kind }: { kind: "appeals" | "jobs" }) {
   const [items, setItems] = useState<ApplicationItem[]>([]);
   const [tab, setTab] = useState<"new" | "active" | "done">("new");
   const [msg, setMsg] = useState<string | null>(null);
-  const [profileAuthor, setProfileAuthor] = useState<
-    NonNullable<ApplicationItem["author"]> | null
-  >(null);
+  const [profileUser, setProfileUser] = useState<ProfileUser | null>(null);
 
   const load = useCallback(async () => {
     setItems(await fetchApplicationsReview());
@@ -417,7 +410,13 @@ function ReviewPanel({ kind }: { kind: "appeals" | "jobs" }) {
     return a.status === "accepted" || a.status === "rejected";
   });
 
+  const decisionGate = useRef(0);
+
   const onStatus = async (id: string, status: string, needNote = false) => {
+    if ((status === "accepted" || status === "rejected") && Date.now() < decisionGate.current) {
+      return;
+    }
+    decisionGate.current = Date.now() + 400;
     let note: string | undefined;
     if (needNote) {
       const raw = window.prompt("Причина / коментар (необов'язково):");
@@ -498,7 +497,7 @@ function ReviewPanel({ kind }: { kind: "appeals" | "jobs" }) {
                     <div className="cabinet-apps__author-info">
                       <span
                         className="author-link"
-                        onClick={() => setProfileAuthor(app.author!)}
+                        onClick={() => setProfileUser(app.author!)}
                       >
                         {app.author.name}
                       </span>
@@ -523,7 +522,15 @@ function ReviewPanel({ kind }: { kind: "appeals" | "jobs" }) {
                     )}
                     <div className="cabinet-apps__author-info">
                       <span className="cabinet-apps__date">
-                        Розглядає: {app.reviewer.name}
+                        {app.status === "accepted" || app.status === "rejected"
+                          ? "Розглядав: "
+                          : "Розглядає: "}
+                        <span
+                          className="author-link"
+                          onClick={() => setProfileUser(app.reviewer!)}
+                        >
+                          {app.reviewer.name}
+                        </span>
                       </span>
                     </div>
                   </div>
@@ -542,19 +549,35 @@ function ReviewPanel({ kind }: { kind: "appeals" | "jobs" }) {
                 )}
                 <div className="cabinet-review-actions">
                   {app.status === "new" && (
-                    <button
-                      type="button"
-                      className="cabinet-action cabinet-action--review"
-                      onClick={() => void onStatus(app.id, "reviewing")}
-                    >
-                      Розглядати
-                    </button>
+                    <>
+                      <button
+                        type="button"
+                        className="cabinet-action cabinet-action--ok"
+                        onClick={() => void onStatus(app.id, "accepted", true)}
+                      >
+                        Прийняти
+                      </button>
+                      <button
+                        type="button"
+                        className="cabinet-action cabinet-action--no"
+                        onClick={() => void onStatus(app.id, "rejected", true)}
+                      >
+                        Відхилити
+                      </button>
+                      <button
+                        type="button"
+                        className="cabinet-action cabinet-action--review"
+                        onClick={() => void onStatus(app.id, "reviewing")}
+                      >
+                        Розглянути
+                      </button>
+                    </>
                   )}
-                  {app.status !== "accepted" && app.status !== "rejected" && (
+                  {(app.status === "reviewing" || app.status === "dialogue") && (
                     <ReviewChat
                       app={app}
                       onChanged={() => void load()}
-                      onProfile={() => app.author && setProfileAuthor(app.author)}
+                      onProfile={() => app.author && setProfileUser(app.author)}
                       onStatus={(status, needNote) => void onStatus(app.id, status, needNote)}
                     />
                   )}
@@ -573,8 +596,8 @@ function ReviewPanel({ kind }: { kind: "appeals" | "jobs" }) {
           </ul>
         )}
       </div>
-      {profileAuthor && (
-        <ProfileModal author={profileAuthor} onClose={() => setProfileAuthor(null)} />
+      {profileUser && (
+        <ProfileModal user={profileUser} onClose={() => setProfileUser(null)} />
       )}
     </div>
   );
@@ -584,9 +607,7 @@ function AppointmentsQueue() {
   const [items, setItems] = useState<AppointmentItem[]>([]);
   const [tab, setTab] = useState<"new" | "active" | "done">("new");
   const [msg, setMsg] = useState<string | null>(null);
-  const [profileAuthor, setProfileAuthor] = useState<
-    NonNullable<ApplicationItem["author"]> | null
-  >(null);
+  const [profileUser, setProfileUser] = useState<ProfileUser | null>(null);
 
   const load = useCallback(async () => {
     setItems(await fetchAppointmentsQueue());
@@ -598,7 +619,7 @@ function AppointmentsQueue() {
 
   const filtered = items.filter((a) => {
     if (tab === "new") return a.status === "new";
-    if (tab === "active") return a.status === "in_progress";
+    if (tab === "active") return a.status === "in_progress" || a.status === "dialogue";
     return a.status === "accepted" || a.status === "rejected";
   });
 
@@ -652,14 +673,14 @@ function AppointmentsQueue() {
             className={`cabinet-tab${tab === "active" ? " cabinet-tab--on" : ""}`}
             onClick={() => setTab("active")}
           >
-            У роботі
+            На розгляді
           </button>
           <button
             type="button"
             className={`cabinet-tab${tab === "done" ? " cabinet-tab--on" : ""}`}
             onClick={() => setTab("done")}
           >
-            Вирішені
+            Архів
           </button>
         </div>
         {msg && <p className="cabinet-profile-error">{msg}</p>}
@@ -687,7 +708,7 @@ function AppointmentsQueue() {
                     <div className="cabinet-apps__author-info">
                       <span
                         className="author-link"
-                        onClick={() => setProfileAuthor(a.author!)}
+                        onClick={() => setProfileUser(a.author!)}
                       >
                         {a.author.name}
                       </span>
@@ -707,7 +728,17 @@ function AppointmentsQueue() {
                       </div>
                     )}
                     <div className="cabinet-apps__author-info">
-                      <span className="cabinet-apps__date">Оператор: {a.operator.name}</span>
+                      <span className="cabinet-apps__date">
+                        {a.status === "accepted" || a.status === "rejected"
+                          ? "Розглядав: "
+                          : "Розглядає: "}
+                        <span
+                          className="author-link"
+                          onClick={() => setProfileUser(a.operator!)}
+                        >
+                          {a.operator.name}
+                        </span>
+                      </span>
                     </div>
                   </div>
                 )}
@@ -720,18 +751,8 @@ function AppointmentsQueue() {
                     Причина: {a.decisionNote || "Не вказана"}
                   </div>
                 )}
-                <PanelAppointmentChat appointment={a} onChanged={() => void load()} />
                 <div className="cabinet-review-actions">
                   {a.status === "new" && (
-                    <button
-                      type="button"
-                      className="cabinet-action cabinet-action--review"
-                      onClick={() => void onStatus(a.id, "in_progress")}
-                    >
-                      Взяти в роботу
-                    </button>
-                  )}
-                  {a.status === "in_progress" && (
                     <>
                       <button
                         type="button"
@@ -747,7 +768,22 @@ function AppointmentsQueue() {
                       >
                         Відхилити
                       </button>
+                      <button
+                        type="button"
+                        className="cabinet-action cabinet-action--review"
+                        onClick={() => void onStatus(a.id, "in_progress")}
+                      >
+                        Розглянути
+                      </button>
                     </>
+                  )}
+                  {(a.status === "in_progress" || a.status === "dialogue") && (
+                    <PanelAppointmentChat
+                      appointment={a}
+                      onChanged={() => void load()}
+                      onProfile={() => a.author && setProfileUser(a.author)}
+                      onStatus={(status, needNote) => void onStatus(a.id, status, needNote)}
+                    />
                   )}
                   {(a.status === "accepted" || a.status === "rejected") && (
                     <button
@@ -764,8 +800,8 @@ function AppointmentsQueue() {
           </ul>
         )}
       </div>
-      {profileAuthor && (
-        <ProfileModal author={profileAuthor} onClose={() => setProfileAuthor(null)} />
+      {profileUser && (
+        <ProfileModal user={profileUser} onClose={() => setProfileUser(null)} />
       )}
     </div>
   );
@@ -1761,7 +1797,7 @@ export function PanelPage() {
   if (canCallCenter) tabs.push({ id: "callcenter", label: "Кол-центр" });
   if (canManageAnn) tabs.push({ id: "constructor", label: "Конструктор" });
   if (isAssigner) tabs.push({ id: "roles", label: "Посади" });
-  if (isSysadmin) tabs.push({ id: "users", label: "Користувачі" });
+  if (isSysadmin) tabs.push({ id: "users", label: "Адміністрування" });
 
   const allowed = tabs.some((t) => t.id === tab);
   const activeTab = allowed ? tab : tabs[0]?.id ?? "appeals";
@@ -1809,33 +1845,6 @@ export function PanelPage() {
 }
 
 
-function shortUa(ua: string | null): string {
-  if (!ua) return "—";
-  const b = /Firefox\//.test(ua)
-    ? "Firefox"
-    : /Edg\//.test(ua)
-      ? "Edge"
-      : /OPR\//.test(ua)
-        ? "Opera"
-        : /Chrome\//.test(ua)
-          ? "Chrome"
-          : /Safari\//.test(ua)
-            ? "Safari"
-            : "Інший";
-  const os = /Windows/.test(ua)
-    ? "Windows"
-    : /Android/.test(ua)
-      ? "Android"
-      : /iPhone|iPad|iPod/.test(ua)
-        ? "iOS"
-        : /Mac OS/.test(ua)
-          ? "macOS"
-          : /Linux/.test(ua)
-            ? "Linux"
-            : "";
-  return os ? `${b} · ${os}` : b;
-}
-
 function fmtDate(iso: string | null): string {
   if (!iso) return "—";
   const d = new Date(iso.endsWith("Z") ? iso : iso.replace(" ", "T") + "Z");
@@ -1843,12 +1852,44 @@ function fmtDate(iso: string | null): string {
   return d.toLocaleString("uk-UA", { dateStyle: "short", timeStyle: "short" });
 }
 
+type UsersSortKey =
+  | "name"
+  | "email"
+  | "roles"
+  | "ip"
+  | "device"
+  | "created"
+  | "seen"
+  | "status";
+
+function userStatusKey(u: AdminUserItem): "banned" | "temp" | "active" {
+  if (u.banned) return "banned";
+  if (
+    u.blockedUntil &&
+    new Date(u.blockedUntil + (u.blockedUntil.endsWith("Z") ? "" : "Z")) > new Date()
+  ) {
+    return "temp";
+  }
+  return "active";
+}
+
+function withinDays(iso: string | null, days: number): boolean {
+  if (!iso) return false;
+  const d = new Date(iso.endsWith("Z") ? iso : iso.replace(" ", "T") + "Z");
+  if (Number.isNaN(d.getTime())) return false;
+  return Date.now() - d.getTime() <= days * 86400000;
+}
+
 function PanelAppointmentChat({
   appointment,
   onChanged,
+  onProfile,
+  onStatus,
 }: {
   appointment: AppointmentItem;
   onChanged: () => void;
+  onProfile?: () => void;
+  onStatus: (status: string, needNote?: boolean) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<DialogueMessage[]>([]);
@@ -1916,6 +1957,24 @@ function PanelAppointmentChat({
     await loadMessages();
   };
 
+  const showDecisionButtons = !terminal && !open;
+  const decisionGate = useRef(0);
+
+  useLayoutEffect(() => {
+    if (showDecisionButtons) decisionGate.current = Date.now() + 400;
+  }, [showDecisionButtons]);
+
+  const decide = (status: string) => {
+    if (Date.now() < decisionGate.current) return;
+    onStatus(status, true);
+  };
+
+  const onStartDialogue = () => {
+    if (Date.now() < decisionGate.current) return;
+    onStatus("dialogue", false);
+    setOpen(true);
+  };
+
   const onCloseDialogue = async () => {
     if (!window.confirm("Завершити діалог? Повторно відкрити його не можна.")) return;
     setErr(null);
@@ -1929,36 +1988,82 @@ function PanelAppointmentChat({
   };
 
   return (
-    <div className="cabinet-chat">
-      {!terminal && (
-        <div className="cabinet-chat__actions">
-          <button type="button" className="cabinet-chat__toggle" onClick={() => setOpen(!open)}>
-            {open ? "Закрити чат" : `Чат з пацієнтом (${messages.length || "відкрити"})`}
+    <>
+      {!terminal && !open && (
+        <div className="cabinet-review-actions" style={{ marginBottom: "0.5rem" }}>
+          <button
+            type="button"
+            className="cabinet-action cabinet-action--ok"
+            onClick={() => decide("accepted")}
+          >
+            Прийняти
           </button>
-          {!dialogueClosed && (
+          <button
+            type="button"
+            className="cabinet-action cabinet-action--no"
+            onClick={() => decide("rejected")}
+          >
+            Відхилити
+          </button>
+          {appointment.status === "in_progress" && (
             <button
               type="button"
-              className="cabinet-action cabinet-action--no"
-              onClick={() => void onCloseDialogue()}
+              className="cabinet-action cabinet-action--dialogue"
+              onClick={onStartDialogue}
             >
-              Завершити діалог
+              Почати діалог
+            </button>
+          )}
+          {appointment.status === "dialogue" && !dialogueClosed && (
+            <button
+              type="button"
+              className="cabinet-action cabinet-action--dialogue"
+              onClick={() => setOpen(true)}
+            >
+              Діалог
             </button>
           )}
         </div>
+      )}
+      {!terminal && !dialogueClosed && appointment.status === "dialogue" && (
+        <button
+          type="button"
+          className="cabinet-action cabinet-action--no"
+          onClick={() => void onCloseDialogue()}
+        >
+          Завершити діалог
+        </button>
       )}
       {err && <p className="cabinet-profile-error">{err}</p>}
       {dialogueClosed && !terminal && (
         <div className="cabinet-apps__note">Діалог завершено</div>
       )}
       {open && !terminal && (
-        <div className="cabinet-chat__body">
+        <div className="chat-modal-overlay" onClick={() => setOpen(false)}>
+          <div className="chat-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="chat-modal__head">
+              <strong>Діалог — запис на прийом</strong>
+              <button
+                type="button"
+                className="profile-modal__close"
+                onClick={() => setOpen(false)}
+              >
+                ×
+              </button>
+            </div>
+            <div className="chat-modal__body">
           <ul className="cabinet-chat__list">
             {messages.map((m) => (
               <li
                 key={m.id}
                 className={`cabinet-chat__msg${m.isReviewer ? " cabinet-chat__msg--staff" : " cabinet-chat__msg--user"}`}
               >
-                <span className="cabinet-chat__author">{m.senderName}</span>
+                <span
+                  className={`cabinet-chat__author${!m.isReviewer && onProfile ? " author-link" : ""}`}
+                  onClick={!m.isReviewer && onProfile ? onProfile : undefined}
+                >
+                  {m.senderName}
+                </span>
                 {m.body && <p>{m.body}</p>}
                 {m.imageUrl && (
                   <img src={m.imageUrl} alt="" className="cabinet-chat__img" />
@@ -2044,9 +2149,11 @@ function PanelAppointmentChat({
               )}
             </form>
           )}
+            </div>
+          </div>
         </div>
       )}
-    </div>
+    </>
   );
 }
 
@@ -2057,16 +2164,97 @@ function UsersBanPanel() {
   const [err, setErr] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [meId, setMeId] = useState<string | null>(null);
+  const [tableOpen, setTableOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const [roleF, setRoleF] = useState("");
+  const [statusF, setStatusF] = useState("");
+  const [regF, setRegF] = useState("");
+  const [actF, setActF] = useState("");
+  const [sortKey, setSortKey] = useState<UsersSortKey>("created");
+  const [sortDir, setSortDir] = useState(-1);
+  const [profileUser, setProfileUser] = useState<ProfileUser | null>(null);
+  const [audit, setAudit] = useState<AuditEntry[]>([]);
+  const [auditQuery, setAuditQuery] = useState("");
+  const [auditActionF, setAuditActionF] = useState("");
+  const [auditDateFrom, setAuditDateFrom] = useState("");
+  const [auditDateTo, setAuditDateTo] = useState("");
+  const [auditActorF, setAuditActorF] = useState("");
+  const [warnUser, setWarnUser] = useState<AdminUserItem | null>(null);
+  const [warnItems, setWarnItems] = useState<WarningHistoryItem[]>([]);
+  const [warnLoading, setWarnLoading] = useState(false);
+
+  const allAuditActions = [...new Set([
+    "application.create", "warn", "warn.block", "timeout", "unblock",
+    "user.ban", "user.unban", "user.delete",
+    "role.assign", "invite.create",
+    "application.status", "application.dialogue_close",
+    "appointment.create", "appointment.status", "appointment.dialogue_close",
+    "account_request.resolve",
+  ])].sort();
+
+  const filteredAudit = audit.filter((e) => {
+    const q = auditQuery.trim().toLowerCase();
+    if (q && !e.action.toLowerCase().includes(q)
+      && !(e.details ?? "").toLowerCase().includes(q)
+      && !(e.actor?.name ?? "").toLowerCase().includes(q)
+      && !(e.target?.name ?? "").toLowerCase().includes(q)) {
+      return false;
+    }
+    if (auditActionF && e.action !== auditActionF) return false;
+    if (auditActorF && (e.actor?.name ?? "") !== auditActorF) return false;
+    if (auditDateFrom) {
+      const from = new Date(auditDateFrom);
+      if (new Date(e.createdAt) < from) return false;
+    }
+    if (auditDateTo) {
+      const to = new Date(auditDateTo + "T23:59:59");
+      if (new Date(e.createdAt) > to) return false;
+    }
+    return true;
+  });
+
+  const allAuditActors = [...new Set(audit.map((e) => e.actor?.name).filter(Boolean))].sort();
+
+  const downloadAuditCsv = () => {
+    const header = "Дата,Дія,Актор,Ціль,Деталі\n";
+    const rows = filteredAudit.map((e) => [
+      fmtDate(e.createdAt).replace(",", "."),
+      AUDIT_ACTION_LABELS[e.action] ?? e.action,
+      e.actor?.name ?? "Система",
+      e.target?.name ?? "",
+      (e.details ?? "").replace(/"/g, '""').replace(/\n/g, " "),
+    ].map((v) => `"${v}"`).join(","));
+    const csv = header + rows.join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `audit-${new Date().toISOString().slice(0,10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   const load = useCallback(async () => {
-    const [list, reqs] = await Promise.all([fetchAdminUsers(), fetchAccountRequests()]);
+    const [list, reqs, auditLog] = await Promise.all([
+      fetchAdminUsers(),
+      fetchAccountRequests(),
+      fetchAuditLog(),
+    ]);
     setUsers(list);
     setRequests(reqs.filter((r) => r.status === "pending"));
+    setAudit(auditLog);
     setErr(list.length ? null : "Не вдалося завантажити користувачів");
     setLoading(false);
     const me = await fetchMe();
     setMeId(me?.id ?? null);
   }, []);
+
+  const openWarnings = async (u: AdminUserItem) => {
+    setWarnUser(u);
+    setWarnLoading(true);
+    setWarnItems(await fetchUserWarnings(u.id));
+    setWarnLoading(false);
+  };
 
   useEffect(() => {
     void load();
@@ -2141,6 +2329,60 @@ function UsersBanPanel() {
     await run(req.userId, () => resolveAccountRequest(req.id, done, note));
   };
 
+  const needle = query.trim().toLowerCase();
+  const visible = users
+    .filter((u) => {
+      if (
+        needle &&
+        !u.name.toLowerCase().includes(needle) &&
+        !(u.email ?? "").toLowerCase().includes(needle) &&
+        !(u.lastIp ?? "").toLowerCase().includes(needle)
+      ) {
+        return false;
+      }
+      if (roleF && !u.roles.includes(roleF)) return false;
+      if (statusF && userStatusKey(u) !== statusF) return false;
+      if (regF && !withinDays(u.createdAt, Number(regF))) return false;
+      if (actF === "never") return !u.lastSeen;
+      if (actF && !withinDays(u.lastSeen, Number(actF))) return false;
+      return true;
+    })
+    .sort((a, b) => {
+      const dir = sortDir;
+      switch (sortKey) {
+        case "name":
+          return dir * a.name.localeCompare(b.name, "uk");
+        case "email":
+          return dir * (a.email ?? "").localeCompare(b.email ?? "", "uk");
+        case "roles":
+          return dir * a.roles.join(", ").localeCompare(b.roles.join(", "), "uk");
+        case "ip":
+          return dir * (a.lastIp ?? "").localeCompare(b.lastIp ?? "", "uk");
+        case "device":
+          return dir * formatUa(a.lastUa).localeCompare(formatUa(b.lastUa), "uk");
+        case "seen":
+          return dir * (a.lastSeen ?? "").localeCompare(b.lastSeen ?? "");
+        case "status":
+          return dir * userStatusKey(a).localeCompare(userStatusKey(b));
+        default:
+          return dir * a.createdAt.localeCompare(b.createdAt);
+      }
+    });
+
+  const allRoles = [...new Set(users.flatMap((u) => u.roles))].sort();
+
+  const toggleSort = (key: UsersSortKey) => {
+    if (sortKey === key) {
+      setSortDir((d) => -d);
+      return;
+    }
+    setSortKey(key);
+    setSortDir(key === "created" || key === "seen" ? -1 : 1);
+  };
+
+  const sortArrow = (key: UsersSortKey) =>
+    sortKey === key ? (sortDir === 1 ? " ▲" : " ▼") : "";
+
   if (loading) {
     return (
       <div className="p-block">
@@ -2196,29 +2438,216 @@ function UsersBanPanel() {
         <div className="p-block__head">Користувачі</div>
         <div className="p-block__body">
           {err && <p className="cabinet-auth-msg cabinet-auth-msg--err">{err}</p>}
-          <div className="panel-users-wrap">
-            <table className="panel-users">
-              <thead>
-                <tr>
-                  <th>ПІБ</th>
-                  <th>Email</th>
-                  <th>Посади</th>
-                  <th>IP</th>
-                  <th>Пристрій</th>
-                  <th>Реєстрація</th>
-                  <th>Активність</th>
-                  <th>Статус</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                {users.map((u) => (
-                  <tr key={u.id} className={u.banned ? "panel-users__row--banned" : undefined}>
-                    <td>{u.name}</td>
+          <p className="cabinet-profile-note">
+            Завантажено користувачів: {users.length}. Пошук, фільтри та сортування — у
+            повноекранній таблиці.
+          </p>
+          <button
+            type="button"
+            className="cabinet-action cabinet-action--review"
+            onClick={() => setTableOpen(true)}
+          >
+            Відкрити таблицю користувачів
+          </button>
+        </div>
+      </div>
+
+      <div className="p-block">
+        <div className="p-block__head p-block__head--teal">Журнал дій</div>
+        <div className="p-block__body">
+          <div className="audit-toolbar">
+            <input
+              type="search"
+              className="audit-toolbar__search"
+              placeholder="Пошук: дія, актор, ціль, деталі..."
+              value={auditQuery}
+              onChange={(e) => setAuditQuery(e.target.value)}
+            />
+            <label className="audit-toolbar__filter">
+              Дія
+              <select value={auditActionF} onChange={(e) => setAuditActionF(e.target.value)}>
+                <option value="">Усі дії</option>
+                {allAuditActions.map((a) => (
+                  <option key={a} value={a}>
+                    {AUDIT_ACTION_LABELS[a] ?? a}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="audit-toolbar__filter">
+              Актор
+              <select value={auditActorF} onChange={(e) => setAuditActorF(e.target.value)}>
+                <option value="">Усі актори</option>
+                {allAuditActors.map((a) => (
+                  <option key={a} value={a}>{a}</option>
+                ))}
+              </select>
+            </label>
+            <label className="audit-toolbar__filter">
+              Від
+              <input type="date" value={auditDateFrom} onChange={(e) => setAuditDateFrom(e.target.value)} />
+            </label>
+            <label className="audit-toolbar__filter">
+              До
+              <input type="date" value={auditDateTo} onChange={(e) => setAuditDateTo(e.target.value)} />
+            </label>
+            <button
+              type="button"
+              className="cabinet-logout"
+              onClick={downloadAuditCsv}
+              title="Експорт CSV"
+            >
+              <Icon icon="mdi:download" width={15} height={15} />
+            </button>
+          </div>
+          {filteredAudit.length === 0 ? (
+            <p className="cabinet-profile-note">Записів немає.</p>
+          ) : (
+            <ul className="audit-list">
+              {filteredAudit.map((e) => (
+                <li key={e.id} className="audit-list__item">
+                  <span className="audit-list__date">{fmtDate(e.createdAt)}</span>
+                  <span className="audit-list__action">
+                    {AUDIT_ACTION_LABELS[e.action] ?? e.action}
+                  </span>
+                  <span className="audit-list__actor">{e.actor?.name ?? "Система"}</span>
+                  {e.target && <span className="audit-list__target">→ {e.target.name}</span>}
+                  {e.details && <span className="audit-list__details">{e.details}</span>}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+
+      {tableOpen && (
+        <div className="users-modal-overlay" onClick={() => setTableOpen(false)}>
+          <div className="users-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="users-modal__head">
+              <strong>
+                Користувачі — {visible.length} / {users.length}
+              </strong>
+              <button
+                type="button"
+                className="profile-modal__close"
+                onClick={() => setTableOpen(false)}
+              >
+                ×
+              </button>
+            </div>
+            <div className="users-modal__toolbar">
+              <input
+                type="search"
+                className="users-modal__search"
+                placeholder="Пошук: ПІБ, Email, IP..."
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+              />
+              <label className="users-modal__filter">
+                Посада
+                <select value={roleF} onChange={(e) => setRoleF(e.target.value)}>
+                  <option value="">Усі</option>
+                  {allRoles.map((r) => (
+                    <option key={r} value={r}>
+                      {ROLE_LABELS_UI[r] ?? r}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="users-modal__filter">
+                Статус
+                <select value={statusF} onChange={(e) => setStatusF(e.target.value)}>
+                  <option value="">Усі</option>
+                  <option value="active">Активний</option>
+                  <option value="temp">Тимчасово</option>
+                  <option value="banned">Заблоковано</option>
+                </select>
+              </label>
+              <label className="users-modal__filter">
+                Реєстрація
+                <select value={regF} onChange={(e) => setRegF(e.target.value)}>
+                  <option value="">За весь час</option>
+                  <option value="1">За добу</option>
+                  <option value="7">За тиждень</option>
+                  <option value="30">За місяць</option>
+                  <option value="365">За рік</option>
+                </select>
+              </label>
+              <label className="users-modal__filter">
+                Активність
+                <select value={actF} onChange={(e) => setActF(e.target.value)}>
+                  <option value="">За весь час</option>
+                  <option value="1">За добу</option>
+                  <option value="7">За тиждень</option>
+                  <option value="30">За місяць</option>
+                  <option value="never">Ніколи</option>
+                </select>
+              </label>
+              <button
+                type="button"
+                className="cabinet-logout"
+                onClick={() => {
+                  setQuery("");
+                  setRoleF("");
+                  setStatusF("");
+                  setRegF("");
+                  setActF("");
+                }}
+              >
+                Скинути
+              </button>
+            </div>
+            <div className="users-modal__scroll">
+              <table className="panel-users">
+                <thead>
+                  <tr>
+                    <th onClick={() => toggleSort("name")}>ПІБ{sortArrow("name")}</th>
+                    <th onClick={() => toggleSort("email")}>Email{sortArrow("email")}</th>
+                    <th onClick={() => toggleSort("roles")}>Посади{sortArrow("roles")}</th>
+                    <th onClick={() => toggleSort("ip")}>IP{sortArrow("ip")}</th>
+                    <th onClick={() => toggleSort("device")}>
+                      Пристрій{sortArrow("device")}
+                    </th>
+                    <th onClick={() => toggleSort("created")}>
+                      Реєстрація{sortArrow("created")}
+                    </th>
+                    <th onClick={() => toggleSort("seen")}>
+                      Активність{sortArrow("seen")}
+                    </th>
+                    <th onClick={() => toggleSort("status")}>
+                      Статус{sortArrow("status")}
+                    </th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {visible.map((u) => (
+                    <tr key={u.id} className={u.banned ? "panel-users__row--banned" : undefined}>
+                      <td>
+                        <span
+                          className="author-link"
+                          onClick={() =>
+                            setProfileUser({
+                              id: u.id,
+                              name: u.name,
+                              email: u.email,
+                              age: u.age,
+                              registeredAt: u.createdAt,
+                              bio: u.bio,
+                              avatar: u.avatar,
+                              roles: u.roles,
+                              discordUsername: u.discordUsername,
+                              robloxUsername: u.robloxUsername,
+                            })
+                          }
+                        >
+                          {u.name}
+                        </span>
+                      </td>
                     <td>{u.email ?? "—"}</td>
                     <td>{u.roles.join(", ") || "—"}</td>
                     <td className="panel-users__ip">{u.lastIp ?? "—"}</td>
-                    <td title={u.lastUa ?? ""}>{shortUa(u.lastUa)}</td>
+                    <td title={u.lastUa ?? ""}>{formatUa(u.lastUa)}</td>
                     <td>{fmtDate(u.createdAt)}</td>
                     <td>{fmtDate(u.lastSeen)}</td>
                     <td>
@@ -2244,6 +2673,14 @@ function UsersBanPanel() {
                     </td>
                     <td>
                       <div className="panel-users__actions">
+                        <button
+                          type="button"
+                          className="cabinet-logout"
+                          title="Історія попереджень"
+                          onClick={() => void openWarnings(u)}
+                        >
+                          <Icon icon="mdi:history" width={15} height={15} />
+                        </button>
                         {!u.banned && u.id !== meId && (
                           <>
                             <button
@@ -2312,9 +2749,60 @@ function UsersBanPanel() {
                 ))}
               </tbody>
             </table>
+              {visible.length === 0 && (
+                <p className="cabinet-profile-note">Нічого не знайдено.</p>
+              )}
+            </div>
           </div>
         </div>
-      </div>
+      )}
+
+      {warnUser && (
+        <div className="chat-modal-overlay" onClick={() => setWarnUser(null)}>
+          <div className="chat-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="chat-modal__head">
+              <strong>Історія попереджень — {warnUser.name}</strong>
+              <button
+                type="button"
+                className="profile-modal__close"
+                onClick={() => setWarnUser(null)}
+              >
+                ×
+              </button>
+            </div>
+            <div className="chat-modal__body">
+              {warnLoading ? (
+                <p className="cabinet-profile-note">Завантаження...</p>
+              ) : warnItems.length === 0 ? (
+                <p className="cabinet-profile-note">Попереджень ще не було.</p>
+              ) : (
+                <ul className="audit-list">
+                  {warnItems.map((w) => (
+                    <li key={w.id} className="audit-list__item">
+                      <span className="audit-list__date">{fmtDate(w.createdAt)}</span>
+                      <span className="audit-list__action">
+                        {w.kind === "warn"
+                          ? "Попередження"
+                          : w.kind === "warn_block"
+                            ? "Попередження (з блокуванням)"
+                            : w.kind === "timeout"
+                              ? "Тимчасова блокування"
+                              : w.kind}
+                      </span>
+                      <span className="audit-list__actor">{w.issuedBy?.name ?? "—"}</span>
+                      {w.reason && <span className="audit-list__details">{w.reason}</span>}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {profileUser && (
+        <ProfileModal user={profileUser} onClose={() => setProfileUser(null)} />
+      )}
     </>
   );
 }

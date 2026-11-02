@@ -16,9 +16,8 @@ export const APPLICATION_FORMS: ApplicationForm[] = [
   {
     id: "job_application",
     title: "Заявка на посаду",
-    description: "Подайте заявку, щоб отримати посаду в нашій лікарні.",
+    description: "Подайте заявку, щоб отримати посаду в нашій лікарні. Roblox Username береться з профілю.",
     fields: [
-      { label: "Ваш нікнейм у Roblox", placeholder: "@username", required: true },
       { label: "Бажана посада", placeholder: "Медична сестра / Санітар / Інше", required: true },
       { label: "Ваш досвід у RolePlay", placeholder: "Опишіть максимально розгорнуто", multiline: true, required: true },
       { label: "Чи перебуваєте ви у нашій Roblox-групі?", placeholder: "Так / Ні", required: true },
@@ -27,9 +26,8 @@ export const APPLICATION_FORMS: ApplicationForm[] = [
   {
     id: "appeal",
     title: "Апеляція покарання",
-    description: "Оскаржте покарання, якщо вважаєте його несправедливим.",
+    description: "Оскаржте покарання, якщо вважаєте його несправедливим. Roblox Username береться з профілю.",
     fields: [
-      { label: "Ваш нікнейм у Roblox", placeholder: "@username", required: true },
       { label: "Отримане покарання та його причина", multiline: true, required: true },
       { label: "Детальний опис ситуації з вашого боку", multiline: true, required: false },
       { label: "Чому покарання варто зняти чи пом'якшити?", placeholder: "Обґрунтуйте свою позицію", multiline: true, required: true },
@@ -38,7 +36,7 @@ export const APPLICATION_FORMS: ApplicationForm[] = [
   {
     id: "player_complaint",
     title: "Скарга на гравця",
-    description: "Поскаржтеся на порушення правил іншим гравцем.",
+    description: "Поскаржтеся на порушення правил іншим гравцем. Roblox Username порушника вказуйте в полі нижче; ваш — з профілю.",
     fields: [
       { label: "Roblox або Discord порушника", placeholder: "@username / ID", required: true },
       { label: "Яке правило було порушено та коли?", placeholder: "Суть ситуації", multiline: true, required: true },

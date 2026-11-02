@@ -23,6 +23,8 @@ export interface PublicUser {
   hasPassword: boolean;
   googleLinked: boolean;
   bio: string | null;
+  discordUsername: string | null;
+  robloxUsername: string | null;
   createdAt: string;
   warnings: number;
   blockedUntil: string | null;
@@ -47,10 +49,19 @@ export interface ApplicationItem {
     bio?: string | null;
     avatar?: string | null;
     roles?: string[];
+    discordUsername?: string | null;
+    robloxUsername?: string | null;
   };
   reviewer?: {
+    id: string;
     name: string;
+    email: string | null;
+    registeredAt?: string | null;
+    bio?: string | null;
     avatar: string | null;
+    roles?: string[];
+    discordUsername?: string | null;
+    robloxUsername?: string | null;
   } | null;
   dialogueClosedAt?: string | null;
 }
@@ -120,13 +131,26 @@ export interface AppointmentItem {
     id: string;
     name: string;
     email: string | null;
+    age?: number | null;
+    registeredAt?: string | null;
+    bio?: string | null;
     avatar?: string | null;
     roles?: string[];
+    discordUsername?: string | null;
+    robloxUsername?: string | null;
   };
   operator?: {
+    id: string;
     name: string;
+    email: string | null;
+    registeredAt?: string | null;
+    bio?: string | null;
     avatar: string | null;
+    roles?: string[];
+    discordUsername?: string | null;
+    robloxUsername?: string | null;
   } | null;
+  msgCount?: number;
   dialogueClosedAt?: string | null;
 }
 
@@ -216,6 +240,8 @@ export async function saveProfile(input: {
   age: number;
   avatar?: string | null;
   bio?: string | null;
+  discordUsername?: string | null;
+  robloxUsername?: string | null;
 }): Promise<{ ok: true; user: PublicUser } | { ok: false; error: string }> {
   const res = await apiFetch<{ user: PublicUser }>("/api/profile", {
     method: "POST",
@@ -237,11 +263,6 @@ export interface AuthVerifyResult {
 
 export async function registerStart(input: {
   email: string;
-  firstName: string;
-  lastName: string;
-  patronymic: string;
-  gender: string;
-  age: number;
   password: string;
 }): Promise<{ ok: true; challengeId: string } | { ok: false; error: string }> {
   const res = await apiFetch<AuthChallengeStart>("/api/auth/register/start", {
@@ -382,6 +403,11 @@ export interface AdminUserItem {
   email: string | null;
   name: string;
   roles: string[];
+  avatar?: string | null;
+  age?: number | null;
+  bio?: string | null;
+  discordUsername?: string | null;
+  robloxUsername?: string | null;
   banned: boolean;
   bannedReason: string | null;
   bannedAt: string | null;
@@ -471,6 +497,39 @@ export interface AccountRequestItem {
   createdAt: string;
   email: string | null;
   name: string;
+}
+
+export interface WarningHistoryItem {
+  id: string;
+  kind: string;
+  reason: string | null;
+  createdAt: string;
+  issuedBy: { id: string; name: string } | null;
+}
+
+export async function fetchUserWarnings(
+  id: string,
+): Promise<WarningHistoryItem[]> {
+  const res = await apiFetch<{ warnings: WarningHistoryItem[] }>(
+    `/api/admin/users/${id}/warnings`,
+  );
+  if (!res.ok) return [];
+  return res.data.warnings;
+}
+
+export interface AuditEntry {
+  id: string;
+  action: string;
+  details: string | null;
+  createdAt: string;
+  actor: { id: string; name: string } | null;
+  target: { id: string; name: string } | null;
+}
+
+export async function fetchAuditLog(): Promise<AuditEntry[]> {
+  const res = await apiFetch<{ entries: AuditEntry[] }>("/api/admin/audit");
+  if (!res.ok) return [];
+  return res.data.entries;
 }
 
 export async function fetchAccountRequests(): Promise<AccountRequestItem[]> {
@@ -566,18 +625,43 @@ export async function copyText(text: string): Promise<boolean> {
   }
 }
 
-export async function fetchSettings(): Promise<boolean> {  const res = await apiFetch<{ emailNotifications: boolean }>("/api/settings");
-  if (!res.ok) return true;
-  return res.data.emailNotifications;
+export interface SettingsData {
+  emailNotifications: boolean;
+  notifyNewApplication: boolean;
+  notifyApplicationDialogue: boolean;
+  notifyNewJob: boolean;
+  notifyJobDialogue: boolean;
+  notifyNewAppointment: boolean;
+  notifyAppointmentDialogue: boolean;
 }
 
-export async function saveSettings(emailNotifications: boolean): Promise<boolean> {
-  const res = await apiFetch<{ emailNotifications: boolean }>("/api/settings", {
+export type SettingsField = keyof SettingsData;
+
+export async function fetchSettings(): Promise<SettingsData> {
+  const res = await apiFetch<SettingsData>("/api/settings");
+  if (!res.ok) {
+    return {
+      emailNotifications: true,
+      notifyNewApplication: true,
+      notifyApplicationDialogue: true,
+      notifyNewJob: true,
+      notifyJobDialogue: true,
+      notifyNewAppointment: true,
+      notifyAppointmentDialogue: true,
+    };
+  }
+  return res.data;
+}
+
+export async function saveSettings(
+  patch: Partial<SettingsData>,
+): Promise<SettingsData | null> {
+  const res = await apiFetch<SettingsData>("/api/settings", {
     method: "POST",
-    body: { emailNotifications },
+    body: patch,
   });
-  if (!res.ok) return false;
-  return res.data.emailNotifications;
+  if (!res.ok) return null;
+  return res.data;
 }
 
 export async function submitApplication(
