@@ -3,6 +3,8 @@ import { Icon } from "@iconify/react";
 import {
   acceptInvite,
   accountRequest,
+  deleteApplicationMessage,
+  deleteAppointmentMessage,
   emailChangeStart,
   emailChangeVerify,
   fetchAppointments,
@@ -32,6 +34,8 @@ import {
   sendMessage,
   sendAppointmentMessage,
   setToken,
+  updateApplicationMessage,
+  updateAppointmentMessage,
   type AppointmentItem,
   type ApplicationItem,
   type DialogueMessage,
@@ -853,8 +857,11 @@ function AppItem({ app, user }: { app: ApplicationItem; user: PublicUser }) {
   const isStaffUser = user.roles.some((role) => role !== "patient");
 
   const canManageMessage = (message: DialogueMessage) => {
-    if (!isStaffUser) return false;
-    return message.senderId === user.id || (user.roles.includes("sysadmin") && message.isReviewer);
+    // Будь-який користувач може керувати власними повідомленнями;
+    // sysadmin також може керувати повідомленнями рецензентів
+    if (message.senderId === user.id) return true;
+    if (isStaffUser && user.roles.includes("sysadmin") && message.isReviewer) return true;
+    return false;
   };
 
   const deleteMessage = async (messageId: string) => {
@@ -1166,8 +1173,11 @@ function AppointmentChat({ appointment, user }: { appointment: AppointmentItem; 
   const isStaffUser = user.roles.some((role) => role !== "patient");
 
   const canManageMessage = (message: DialogueMessage) => {
-    if (!isStaffUser) return false;
-    return message.senderId === user.id || (user.roles.includes("sysadmin") && message.isReviewer);
+    // Будь-який користувач може керувати власними повідомленнями;
+    // sysadmin також може керувати повідомленнями рецензентів
+    if (message.senderId === user.id) return true;
+    if (isStaffUser && user.roles.includes("sysadmin") && message.isReviewer) return true;
+    return false;
   };
 
   const deleteMessage = async (messageId: string) => {
