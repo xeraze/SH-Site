@@ -102,11 +102,13 @@ function ReviewChat({
   onChanged,
   onProfile,
   onStatus,
+  user,
 }: {
   app: ApplicationItem;
   onChanged: () => void;
   onProfile: () => void;
   onStatus: (status: string, needNote?: boolean) => void;
+  user: PublicUser | null;
 }) {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<DialogueMessage[]>([]);
@@ -151,9 +153,14 @@ function ReviewChat({
   };
 
   const load = useCallback(async () => {
-    const res = await fetchMessages(app.id);
-    setMessages(res.messages);
-    if (res.dialogueClosed) setClosedLocal(true);
+    try {
+      const res = await fetchMessages(app.id);
+      setMessages(Array.isArray(res?.messages) ? res.messages : []);
+      if (res?.dialogueClosed) setClosedLocal(true);
+    } catch {
+      setMessages([]);
+      setErr("Не вдалося завантажити історію діалогу.");
+    }
   }, [app.id]);
 
   useEffect(() => {
@@ -224,10 +231,16 @@ function ReviewChat({
     onStatus(status, true);
   };
 
-  const onStartDialogue = () => {
+  const onStartDialogue = async () => {
     if (Date.now() < decisionGate.current) return;
-    onStatus("dialogue", false);
+    setErr(null);
+    const res = await setApplicationStatus(app.id, "dialogue");
+    if (!res.ok) {
+      setErr(res.error);
+      return;
+    }
     setOpen(true);
+    onChanged();
   };
 
   const onCloseDialogue = async () => {
@@ -476,7 +489,7 @@ function ReviewChat({
   );
 }
 
-function ReviewPanel({ kind }: { kind: "appeals" | "jobs" }) {
+function ReviewPanel({ kind, user }: { kind: "appeals" | "jobs"; user: PublicUser | null }) {
   const [items, setItems] = useState<ApplicationItem[]>([]);
   const [tab, setTab] = useState<"new" | "active" | "done">("new");
   const [msg, setMsg] = useState<string | null>(null);
@@ -669,6 +682,7 @@ function ReviewPanel({ kind }: { kind: "appeals" | "jobs" }) {
                       onChanged={() => void load()}
                       onProfile={() => app.author && setProfileUser(app.author)}
                       onStatus={(status, needNote) => void onStatus(app.id, status, needNote)}
+                      user={user}
                     />
                   )}
                   {(app.status === "accepted" || app.status === "rejected") && (
@@ -693,7 +707,7 @@ function ReviewPanel({ kind }: { kind: "appeals" | "jobs" }) {
   );
 }
 
-function AppointmentsQueue() {
+function AppointmentsQueue({ user }: { user: PublicUser | null }) {
   const [items, setItems] = useState<AppointmentItem[]>([]);
   const [tab, setTab] = useState<"new" | "active" | "done">("new");
   const [msg, setMsg] = useState<string | null>(null);
@@ -873,6 +887,7 @@ function AppointmentsQueue() {
                       onChanged={() => void load()}
                       onProfile={() => a.author && setProfileUser(a.author)}
                       onStatus={(status, needNote) => void onStatus(a.id, status, needNote)}
+                      user={user}
                     />
                   )}
                   {(a.status === "accepted" || a.status === "rejected") && (
@@ -1940,9 +1955,9 @@ export function PanelPage() {
               </button>
             ))}
           </div>
-          {activeTab === "appeals" && <ReviewPanel kind="appeals" />}
-          {activeTab === "jobs" && <ReviewPanel kind="jobs" />}
-          {activeTab === "callcenter" && <AppointmentsQueue />}
+          {activeTab === "appeals" && <ReviewPanel kind="appeals" user={user} />}
+          {activeTab === "jobs" && <ReviewPanel kind="jobs" user={user} />}
+          {activeTab === "callcenter" && <AppointmentsQueue user={user} />}
           {activeTab === "constructor" && <AnnouncementsManage />}
           {activeTab === "roles" && <RolesPanel />}
           {activeTab === "users" && <UsersBanPanel />}
@@ -1993,11 +2008,13 @@ function PanelAppointmentChat({
   onChanged,
   onProfile,
   onStatus,
+  user,
 }: {
   appointment: AppointmentItem;
   onChanged: () => void;
   onProfile?: () => void;
   onStatus: (status: string, needNote?: boolean) => void;
+  user: PublicUser | null;
 }) {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<DialogueMessage[]>([]);
@@ -2044,9 +2061,14 @@ function PanelAppointmentChat({
   const dialogueClosed = !!appointment.dialogueClosedAt || closedLocal;
 
   const loadMessages = useCallback(async () => {
-    const res = await fetchAppointmentMessages(appointment.id);
-    setMessages(res.messages);
-    if (res.dialogueClosed) setClosedLocal(true);
+    try {
+      const res = await fetchAppointmentMessages(appointment.id);
+      setMessages(Array.isArray(res?.messages) ? res.messages : []);
+      if (res?.dialogueClosed) setClosedLocal(true);
+    } catch {
+      setMessages([]);
+      setErr("Не вдалося завантажити історію діалогу.");
+    }
   }, [appointment.id]);
 
   useEffect(() => {
@@ -2108,10 +2130,16 @@ function PanelAppointmentChat({
     onStatus(status, true);
   };
 
-  const onStartDialogue = () => {
+  const onStartDialogue = async () => {
     if (Date.now() < decisionGate.current) return;
-    onStatus("dialogue", false);
+    setErr(null);
+    const res = await setAppointmentStatus(appointment.id, "dialogue");
+    if (!res.ok) {
+      setErr(res.error);
+      return;
+    }
     setOpen(true);
+    onChanged();
   };
 
   const onCloseDialogue = async () => {
