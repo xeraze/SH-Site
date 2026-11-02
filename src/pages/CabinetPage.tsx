@@ -598,7 +598,15 @@ export function CabinetPage() {
             <div className="p-block__body cabinet-header__body">
               <div className="cabinet-header__left">
                 {user.avatar ? (
-                  <img src={user.avatar} alt="Аватар" className="cabinet-avatar" />
+                  <img
+                    src={user.avatar}
+                    alt="Аватар"
+                    className="cabinet-avatar"
+                    onError={(e) => {
+                      const target = e.currentTarget as HTMLImageElement;
+                      target.style.display = "none";
+                    }}
+                  />
                 ) : (
                   <span className="cabinet-avatar cabinet-avatar--empty">Фото</span>
                 )}
@@ -767,7 +775,7 @@ function CabinetTabs({
                     id={`app-${app.id}`}
                     className={`cabinet-apps__wrap${highlight === app.id ? " is-highlighted" : ""}`}
                   >
-                    <AppItem app={app} />
+                    <AppItem app={app} user={user} />
                   </li>
                 ))}
               </ul>
@@ -813,7 +821,7 @@ function CabinetTabs({
                         Причина: {a.decisionNote || "Не вказана"}
                       </div>
                     )}
-                    <AppointmentChat appointment={a} />
+                    <AppointmentChat appointment={a} user={user} />
                   </li>
                 ))}
               </ul>
@@ -829,7 +837,7 @@ function CabinetTabs({
   );
 }
 
-function AppItem({ app }: { app: ApplicationItem }) {
+function AppItem({ app, user }: { app: ApplicationItem; user: PublicUser }) {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<DialogueMessage[]>([]);
   const [text, setText] = useState("");
@@ -840,6 +848,41 @@ function AppItem({ app }: { app: ApplicationItem }) {
   const [videoOn, setVideoOn] = useState(false);
   const [closedLocal, setClosedLocal] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+  const [editingText, setEditingText] = useState("");
+  const isStaffUser = user.roles.some((role) => role !== "patient");
+
+  const canManageMessage = (message: DialogueMessage) => {
+    if (!isStaffUser) return false;
+    return message.senderId === user.id || (user.roles.includes("sysadmin") && message.isReviewer);
+  };
+
+  const deleteMessage = async (messageId: string) => {
+    if (!window.confirm("Видалити це повідомлення?")) return;
+    const res = await deleteApplicationMessage(app.id, messageId);
+    if (!res.ok) {
+      setErr(res.error);
+      return;
+    }
+    setEditingMessageId(null);
+    await loadMessages();
+  };
+
+  const saveEditedMessage = async (messageId: string) => {
+    const body = editingText.trim();
+    if (!body) {
+      setErr("Повідомлення не може бути порожнім");
+      return;
+    }
+    const res = await updateApplicationMessage(app.id, messageId, body);
+    if (!res.ok) {
+      setErr(res.error);
+      return;
+    }
+    setEditingMessageId(null);
+    setEditingText("");
+    await loadMessages();
+  };
 
   const loadMessages = useCallback(async () => {
     const res = await fetchMessages(app.id);
@@ -956,13 +999,74 @@ function AppItem({ app }: { app: ApplicationItem }) {
                   className={`cabinet-chat__msg${m.isReviewer ? " cabinet-chat__msg--staff" : ""}`}
                 >
                   <span className="cabinet-chat__who">{m.senderName}</span>
-                  {m.body && <p>{m.body}</p>}
-                  {m.imageUrl && (
-                    <img src={m.imageUrl} alt="" className="cabinet-chat__img" />
+                  {editingMessageId === m.id ? (
+                    <div className="cabinet-chat__edit">
+                      <textarea
+                        value={editingText}
+                        onChange={(e) => setEditingText(e.target.value)}
+                        rows={3}
+                        maxLength={2000}
+                      />
+                      <div className="cabinet-chat__edit-actions">
+                        <button type="button" className="portal-cta" onClick={() => void saveEditedMessage(m.id)}>
+                          Зберегти
+                        </button>
+                        <button
+                          type="button"
+                          className="cabinet-action cabinet-action--no"
+                          onClick={() => {
+                            setEditingMessageId(null);
+                            setEditingText("");
+                          }}
+                        >
+                          Скасувати
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      {m.body && <p>{m.body}</p>}
+                      {m.imageUrl && (
+                        <img
+                          src={m.imageUrl}
+                          alt=""
+                          className="cabinet-chat__img"
+                          onError={(e) => {
+                            const target = e.currentTarget as HTMLImageElement;
+                            target.style.display = "none";
+                          }}
+                        />
+                      )}
+                      {m.videoUrl && <VideoPreview url={m.videoUrl} />}
+                      {m.doc && (
+                        <ChatDocCard name={m.doc.name} url={m.doc.url} size={m.doc.size} />
+                      )}
+                    </>
                   )}
-                  {m.videoUrl && <VideoPreview url={m.videoUrl} />}
-                  {m.doc && (
-                    <ChatDocCard name={m.doc.name} url={m.doc.url} size={m.doc.size} />
+                  {canManageMessage(m) && (
+                    <div className="cabinet-chat__actions">
+                      {m.senderId === user.id && (
+                        <button
+                          type="button"
+                          className="cabinet-chat__action-btn"
+                          onClick={() => {
+                            setEditingMessageId(m.id);
+                            setEditingText(m.body || "");
+                          }}
+                        >
+                          Редагувати
+                        </button>
+                      )}
+                      {(m.senderId === user.id || user.roles.includes("sysadmin")) && (
+                        <button
+                          type="button"
+                          className="cabinet-chat__action-btn cabinet-chat__action-btn--danger"
+                          onClick={() => void deleteMessage(m.id)}
+                        >
+                          Видалити
+                        </button>
+                      )}
+                    </div>
                   )}
                 </li>
               ))}
@@ -1046,7 +1150,7 @@ function AppItem({ app }: { app: ApplicationItem }) {
   );
 }
 
-function AppointmentChat({ appointment }: { appointment: AppointmentItem }) {
+function AppointmentChat({ appointment, user }: { appointment: AppointmentItem; user: PublicUser }) {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<DialogueMessage[]>([]);
   const [text, setText] = useState("");
@@ -1057,6 +1161,41 @@ function AppointmentChat({ appointment }: { appointment: AppointmentItem }) {
   const [videoOn, setVideoOn] = useState(false);
   const [closedLocal, setClosedLocal] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+  const [editingText, setEditingText] = useState("");
+  const isStaffUser = user.roles.some((role) => role !== "patient");
+
+  const canManageMessage = (message: DialogueMessage) => {
+    if (!isStaffUser) return false;
+    return message.senderId === user.id || (user.roles.includes("sysadmin") && message.isReviewer);
+  };
+
+  const deleteMessage = async (messageId: string) => {
+    if (!window.confirm("Видалити це повідомлення?")) return;
+    const res = await deleteAppointmentMessage(appointment.id, messageId);
+    if (!res.ok) {
+      setErr(res.error);
+      return;
+    }
+    setEditingMessageId(null);
+    await loadMessages();
+  };
+
+  const saveEditedMessage = async (messageId: string) => {
+    const body = editingText.trim();
+    if (!body) {
+      setErr("Повідомлення не може бути порожнім");
+      return;
+    }
+    const res = await updateAppointmentMessage(appointment.id, messageId, body);
+    if (!res.ok) {
+      setErr(res.error);
+      return;
+    }
+    setEditingMessageId(null);
+    setEditingText("");
+    await loadMessages();
+  };
   const terminal = appointment.status === "accepted" || appointment.status === "rejected";
   const dialogueClosed = !!appointment.dialogueClosedAt || closedLocal;
   const closed = terminal || dialogueClosed;
@@ -1153,13 +1292,74 @@ function AppointmentChat({ appointment }: { appointment: AppointmentItem }) {
                 className={`cabinet-chat__msg${m.isReviewer ? " cabinet-chat__msg--staff" : " cabinet-chat__msg--user"}`}
               >
                 <span className="cabinet-chat__author">{m.senderName}</span>
-                {m.body && <p>{m.body}</p>}
-                {m.imageUrl && (
-                  <img src={m.imageUrl} alt="" className="cabinet-chat__img" />
+                {editingMessageId === m.id ? (
+                  <div className="cabinet-chat__edit">
+                    <textarea
+                      value={editingText}
+                      onChange={(e) => setEditingText(e.target.value)}
+                      rows={3}
+                      maxLength={2000}
+                    />
+                    <div className="cabinet-chat__edit-actions">
+                      <button type="button" className="portal-cta" onClick={() => void saveEditedMessage(m.id)}>
+                        Зберегти
+                      </button>
+                      <button
+                        type="button"
+                        className="cabinet-action cabinet-action--no"
+                        onClick={() => {
+                          setEditingMessageId(null);
+                          setEditingText("");
+                        }}
+                      >
+                        Скасувати
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    {m.body && <p>{m.body}</p>}
+                    {m.imageUrl && (
+                      <img
+                        src={m.imageUrl}
+                        alt=""
+                        className="cabinet-chat__img"
+                        onError={(e) => {
+                          const target = e.currentTarget as HTMLImageElement;
+                          target.style.display = "none";
+                        }}
+                      />
+                    )}
+                    {m.videoUrl && <VideoPreview url={m.videoUrl} />}
+                    {m.doc && (
+                      <ChatDocCard name={m.doc.name} url={m.doc.url} size={m.doc.size} />
+                    )}
+                  </>
                 )}
-                {m.videoUrl && <VideoPreview url={m.videoUrl} />}
-                {m.doc && (
-                  <ChatDocCard name={m.doc.name} url={m.doc.url} size={m.doc.size} />
+                {canManageMessage(m) && (
+                  <div className="cabinet-chat__actions">
+                    {m.senderId === user.id && (
+                      <button
+                        type="button"
+                        className="cabinet-chat__action-btn"
+                        onClick={() => {
+                          setEditingMessageId(m.id);
+                          setEditingText(m.body || "");
+                        }}
+                      >
+                        Редагувати
+                      </button>
+                    )}
+                    {(m.senderId === user.id || user.roles.includes("sysadmin")) && (
+                      <button
+                        type="button"
+                        className="cabinet-chat__action-btn cabinet-chat__action-btn--danger"
+                        onClick={() => void deleteMessage(m.id)}
+                      >
+                        Видалити
+                      </button>
+                    )}
+                  </div>
                 )}
                 <span className="cabinet-chat__date">
                   {new Date(m.createdAt + "Z").toLocaleString("uk-UA")}

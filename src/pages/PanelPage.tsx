@@ -591,7 +591,15 @@ function ReviewPanel({ kind, user }: { kind: "appeals" | "jobs"; user: PublicUse
                 {app.author && (
                   <div className="cabinet-apps__author">
                     {app.author.avatar ? (
-                      <img src={app.author.avatar} alt="" className="cabinet-apps__avatar" />
+                      <img
+                        src={app.author.avatar}
+                        alt=""
+                        className="cabinet-apps__avatar"
+                        onError={(e) => {
+                          const target = e.currentTarget as HTMLImageElement;
+                          target.style.display = "none";
+                        }}
+                      />
                     ) : (
                       <div className="cabinet-apps__avatar cabinet-apps__avatar--empty">
                         <Icon icon="mdi:account" width={20} height={20} />
@@ -803,7 +811,15 @@ function AppointmentsQueue({ user }: { user: PublicUser | null }) {
                 {a.author && (
                   <div className="cabinet-apps__author">
                     {a.author.avatar ? (
-                      <img src={a.author.avatar} alt="" className="cabinet-apps__avatar" />
+                      <img
+                        src={a.author.avatar}
+                        alt=""
+                        className="cabinet-apps__avatar"
+                        onError={(e) => {
+                          const target = e.currentTarget as HTMLImageElement;
+                          target.style.display = "none";
+                        }}
+                      />
                     ) : (
                       <div className="cabinet-apps__avatar cabinet-apps__avatar--empty">
                         <Icon icon="mdi:account" width={20} height={20} />
@@ -825,7 +841,15 @@ function AppointmentsQueue({ user }: { user: PublicUser | null }) {
                 {a.operator && (
                   <div className="cabinet-apps__author">
                     {a.operator.avatar ? (
-                      <img src={a.operator.avatar} alt="" className="cabinet-apps__avatar" />
+                      <img
+                        src={a.operator.avatar}
+                        alt=""
+                        className="cabinet-apps__avatar"
+                        onError={(e) => {
+                          const target = e.currentTarget as HTMLImageElement;
+                          target.style.display = "none";
+                        }}
+                      />
                     ) : (
                       <div className="cabinet-apps__avatar cabinet-apps__avatar--empty">
                         <Icon icon="mdi:account" width={20} height={20} />

@@ -52,6 +52,10 @@ export function ProfileModal({
                 className="profile-modal__avatar"
                 onClick={() => setZoomed(true)}
                 onContextMenu={(e) => e.preventDefault()}
+                onError={(e) => {
+                  const target = e.currentTarget as HTMLImageElement;
+                  target.style.display = "none";
+                }}
                 draggable={false}
                 style={{ cursor: "zoom-in" }}
               />
@@ -94,6 +98,10 @@ export function ProfileModal({
             className="profile-zoom-img"
             onContextMenu={(e) => e.preventDefault()}
             onClick={(e) => e.stopPropagation()}
+            onError={(e) => {
+              const target = e.currentTarget as HTMLImageElement;
+              target.style.display = "none";
+            }}
             draggable={false}
           />
         </div>

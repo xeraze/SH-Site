@@ -1494,18 +1494,34 @@
 }
 
 .cabinet-chat__action-btn {
-  background: rgba(24, 120, 255, 0.1);
-  border: 1px solid rgba(24, 120, 255, 0.2);
-  border-radius: 999px;
-  padding: 0.35rem 0.7rem;
-  color: #1a5edc;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(180deg, var(--color-teal-soft), var(--color-teal));
+  border: 2px solid var(--color-teal-soft);
+  border-radius: 8px;
+  padding: 0.45rem 0.9rem;
+  color: #fff;
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 700;
   cursor: pointer;
+  text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.25);
+  box-shadow: var(--shadow-card);
+}
+
+.cabinet-chat__action-btn:hover {
+  background: linear-gradient(180deg, var(--color-teal-soft), var(--color-navy));
 }
 
 .cabinet-chat__action-btn--danger {
-  color: #b42318;
-  border-color: rgba(180, 35, 24, 0.2);
-  background: rgba(180, 35, 24, 0.08);
+  color: #fff;
+  border-color: rgba(178, 35, 24, 0.8);
+  background: linear-gradient(180deg, #f7a7a1, #d9534f);
+}
+
+.cabinet-chat__action-btn--danger:hover {
+  background: linear-gradient(180deg, #f4b1ab, #bb2d2f);
 }
 
 .cabinet-chat__attach {

@@ -3,7 +3,10 @@ import { PortalLayout } from "../components/PortalLayout";
 import "./StaffPage.css";
 
 function Avatar({ gender }: { gender: "male" | "female" }) {
-  const src = gender === "female" ? "/SH-Site/avatars/woman-placeholder.png" : "/SH-Site/avatars/man-placeholder.png";
+  const src =
+    gender === "female"
+      ? `${import.meta.env.BASE_URL}avatars/woman-placeholder.png`
+      : `${import.meta.env.BASE_URL}avatars/man-placeholder.png`;
   return <img src={src} alt="" className="staff-card__avatar" />;
 }
 
