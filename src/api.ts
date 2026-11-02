@@ -586,6 +586,38 @@ export async function sendAppointmentMessage(
   return { ok: true };
 }
 
+export async function updateAppointmentMessage(
+  appointmentId: string,
+  messageId: string,
+  body: string,
+  patch: {
+    imageUrl?: string | null;
+    videoUrl?: string | null;
+    doc?: { name: string; data: string } | null;
+    removeImage?: boolean;
+    removeVideo?: boolean;
+    removeDoc?: boolean;
+  } = {},
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const res = await apiFetch(`/api/appointments/${appointmentId}/messages/${messageId}`, {
+    method: "PATCH",
+    body: { body, ...patch },
+  });
+  if (!res.ok) return { ok: false, error: res.error };
+  return { ok: true };
+}
+
+export async function deleteAppointmentMessage(
+  appointmentId: string,
+  messageId: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const res = await apiFetch(`/api/appointments/${appointmentId}/messages/${messageId}`, {
+    method: "DELETE",
+  });
+  if (!res.ok) return { ok: false, error: res.error };
+  return { ok: true };
+}
+
 export async function googleRegisterVerify(
   challengeId: string,
   code: string,
@@ -722,6 +754,38 @@ export async function sendMessage(
   const res = await apiFetch(`/api/applications/${id}/messages`, {
     method: "POST",
     body: { body, imageUrl, videoUrl, doc },
+  });
+  if (!res.ok) return { ok: false, error: res.error };
+  return { ok: true };
+}
+
+export async function updateApplicationMessage(
+  appId: string,
+  messageId: string,
+  body: string,
+  patch: {
+    imageUrl?: string | null;
+    videoUrl?: string | null;
+    doc?: { name: string; data: string } | null;
+    removeImage?: boolean;
+    removeVideo?: boolean;
+    removeDoc?: boolean;
+  } = {},
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const res = await apiFetch(`/api/applications/${appId}/messages/${messageId}`, {
+    method: "PATCH",
+    body: { body, ...patch },
+  });
+  if (!res.ok) return { ok: false, error: res.error };
+  return { ok: true };
+}
+
+export async function deleteApplicationMessage(
+  appId: string,
+  messageId: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const res = await apiFetch(`/api/applications/${appId}/messages/${messageId}`, {
+    method: "DELETE",
   });
   if (!res.ok) return { ok: false, error: res.error };
   return { ok: true };

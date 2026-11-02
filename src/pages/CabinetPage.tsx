@@ -354,6 +354,10 @@ export function CabinetPage() {
     const me = await fetchMe();
     setUser(me);
     if (me) {
+      if (me.needsProfile && window.location.pathname !== "/kabinet") {
+        window.location.assign("/kabinet?tab=profile");
+        return;
+      }
       void loadUnread();
       if (!me.needsProfile) {
         setApplications(await fetchApplications());
@@ -466,11 +470,13 @@ export function CabinetPage() {
     setToken(token);
     setUser(newUser);
     setAuthError(null);
-    if (!newUser.needsProfile) {
-      void loadUnread();
-      void fetchApplications().then(setApplications);
-      void fetchAppointments().then(setAppointments);
+    if (newUser.needsProfile) {
+      window.location.assign("/kabinet?tab=profile");
+      return;
     }
+    void loadUnread();
+    void fetchApplications().then(setApplications);
+    void fetchAppointments().then(setAppointments);
   };
 
   const onPwChangeConfirm = async () => {

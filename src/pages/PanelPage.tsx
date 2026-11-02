@@ -12,6 +12,8 @@ import {
   deleteAnnouncement,
   deleteApplication,
   deleteAppointment,
+  deleteApplicationMessage,
+  deleteAppointmentMessage,
   deleteInvite,
   fetchAccountRequests,
   fetchAdminUsers,
@@ -26,6 +28,8 @@ import {
   fetchUserWarnings,
   resolveAccountRequest,
   saveAnnouncement,
+  updateApplicationMessage,
+  updateAppointmentMessage,
   sendAppointmentMessage,
   sendMessage,
   setApplicationStatus,
@@ -114,6 +118,37 @@ function ReviewChat({
   const [videoOn, setVideoOn] = useState(false);
   const [closedLocal, setClosedLocal] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+  const [editingText, setEditingText] = useState("");
+
+  const deleteMessage = async (messageId: string) => {
+    if (!window.confirm("Видалити це повідомлення?")) return;
+    const res = await deleteApplicationMessage(app.id, messageId);
+    if (!res.ok) {
+      setErr(res.error);
+      return;
+    }
+    setEditingMessageId(null);
+    await load();
+    onChanged();
+  };
+
+  const saveEditedMessage = async (messageId: string) => {
+    const body = editingText.trim();
+    if (!body) {
+      setErr("Повідомлення не може бути порожнім");
+      return;
+    }
+    const res = await updateApplicationMessage(app.id, messageId, body);
+    if (!res.ok) {
+      setErr(res.error);
+      return;
+    }
+    setEditingMessageId(null);
+    setEditingText("");
+    await load();
+    onChanged();
+  };
 
   const load = useCallback(async () => {
     const res = await fetchMessages(app.id);
@@ -293,13 +328,66 @@ function ReviewChat({
                   >
                     {m.senderName}
                   </span>
-                  {m.body && <p>{m.body}</p>}
-                  {m.imageUrl && (
-                    <img src={m.imageUrl} alt="" className="cabinet-chat__img" />
+                  {editingMessageId === m.id ? (
+                    <div className="cabinet-chat__edit">
+                      <textarea
+                        value={editingText}
+                        onChange={(e) => setEditingText(e.target.value)}
+                        rows={3}
+                        maxLength={4000}
+                      />
+                      <div className="cabinet-chat__edit-actions">
+                        <button type="button" className="portal-cta" onClick={() => void saveEditedMessage(m.id)}>
+                          Зберегти
+                        </button>
+                        <button type="button" className="cabinet-action cabinet-action--no" onClick={() => {
+                          setEditingMessageId(null);
+                          setEditingText("");
+                        }}>
+                          Скасувати
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      {m.body && <p>{m.body}</p>}
+                      {m.imageUrl && (
+                        <img
+                          src={m.imageUrl}
+                          alt=""
+                          className="cabinet-chat__img"
+                          onError={(e) => {
+                            const target = e.currentTarget as HTMLImageElement;
+                            target.style.display = "none";
+                          }}
+                        />
+                      )}
+                      {m.videoUrl && <VideoPreview url={m.videoUrl} />}
+                      {m.doc && (
+                        <ChatDocCard name={m.doc.name} url={m.doc.url} size={m.doc.size} />
+                      )}
+                    </>
                   )}
-                  {m.videoUrl && <VideoPreview url={m.videoUrl} />}
-                  {m.doc && (
-                    <ChatDocCard name={m.doc.name} url={m.doc.url} size={m.doc.size} />
+                  {m.isReviewer && (
+                    <div className="cabinet-chat__actions">
+                      <button
+                        type="button"
+                        className="cabinet-chat__action-btn"
+                        onClick={() => {
+                          setEditingMessageId(m.id);
+                          setEditingText(m.body || "");
+                        }}
+                      >
+                        Редагувати
+                      </button>
+                      <button
+                        type="button"
+                        className="cabinet-chat__action-btn cabinet-chat__action-btn--danger"
+                        onClick={() => void deleteMessage(m.id)}
+                      >
+                        Видалити
+                      </button>
+                    </div>
                   )}
                 </li>
               ))}
@@ -478,7 +566,7 @@ function ReviewPanel({ kind }: { kind: "appeals" | "jobs" }) {
         ) : (
           <ul className="cabinet-apps">
             {filtered.map((app) => (
-              <li key={app.id} className="cabinet-apps__item">
+              <li id={`panel-app-${app.id}`} key={app.id} className="cabinet-apps__item">
                 <div className="cabinet-apps__head">
                   <strong>{app.formTitle}</strong>
                   <span className={`cabinet-apps__status cabinet-apps__status--${app.status}`}>
@@ -689,7 +777,7 @@ function AppointmentsQueue() {
         ) : (
           <ul className="cabinet-apps">
             {filtered.map((a) => (
-              <li key={a.id} className="cabinet-apps__item">
+              <li id={`panel-appointment-${a.id}`} key={a.id} className="cabinet-apps__item">
                 <div className="cabinet-apps__head">
                   <strong>Запис на прийом</strong>
                   <span className={`cabinet-apps__status cabinet-apps__status--${a.status}`}>
@@ -1799,6 +1887,24 @@ export function PanelPage() {
   if (isAssigner) tabs.push({ id: "roles", label: "Посади" });
   if (isSysadmin) tabs.push({ id: "users", label: "Адміністрування" });
 
+  useEffect(() => {
+    if (!tabs.length) return;
+    const params = new URLSearchParams(window.location.search);
+    const tabParam = params.get("tab");
+    const appId = params.get("app");
+    if (tabParam && tabs.some((t) => t.id === tabParam)) {
+      setTab(tabParam as PanelTab);
+    }
+    if (appId) {
+      const target =
+        document.getElementById(`panel-app-${appId}`) ??
+        document.getElementById(`panel-appointment-${appId}`);
+      window.setTimeout(() => {
+        target?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 120);
+    }
+  }, [tabs]);
+
   const allowed = tabs.some((t) => t.id === tab);
   const activeTab = allowed ? tab : tabs[0]?.id ?? "appeals";
 
@@ -1901,7 +2007,38 @@ function PanelAppointmentChat({
   const [videoOn, setVideoOn] = useState(false);
   const [closedLocal, setClosedLocal] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+  const [editingText, setEditingText] = useState("");
   const terminal = appointment.status === "accepted" || appointment.status === "rejected";
+
+  const deleteMessage = async (messageId: string) => {
+    if (!window.confirm("Видалити це повідомлення?")) return;
+    const res = await deleteAppointmentMessage(appointment.id, messageId);
+    if (!res.ok) {
+      setErr(res.error);
+      return;
+    }
+    setEditingMessageId(null);
+    await loadMessages();
+    onChanged();
+  };
+
+  const saveEditedMessage = async (messageId: string) => {
+    const body = editingText.trim();
+    if (!body) {
+      setErr("Повідомлення не може бути порожнім");
+      return;
+    }
+    const res = await updateAppointmentMessage(appointment.id, messageId, body);
+    if (!res.ok) {
+      setErr(res.error);
+      return;
+    }
+    setEditingMessageId(null);
+    setEditingText("");
+    await loadMessages();
+    onChanged();
+  };
   const dialogueClosed = !!appointment.dialogueClosedAt || closedLocal;
 
   const loadMessages = useCallback(async () => {
@@ -2064,13 +2201,66 @@ function PanelAppointmentChat({
                 >
                   {m.senderName}
                 </span>
-                {m.body && <p>{m.body}</p>}
-                {m.imageUrl && (
-                  <img src={m.imageUrl} alt="" className="cabinet-chat__img" />
+                {editingMessageId === m.id ? (
+                  <div className="cabinet-chat__edit">
+                    <textarea
+                      value={editingText}
+                      onChange={(e) => setEditingText(e.target.value)}
+                      rows={3}
+                      maxLength={4000}
+                    />
+                    <div className="cabinet-chat__edit-actions">
+                      <button type="button" className="portal-cta" onClick={() => void saveEditedMessage(m.id)}>
+                        Зберегти
+                      </button>
+                      <button type="button" className="cabinet-action cabinet-action--no" onClick={() => {
+                        setEditingMessageId(null);
+                        setEditingText("");
+                      }}>
+                        Скасувати
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    {m.body && <p>{m.body}</p>}
+                    {m.imageUrl && (
+                      <img
+                        src={m.imageUrl}
+                        alt=""
+                        className="cabinet-chat__img"
+                        onError={(e) => {
+                          const target = e.currentTarget as HTMLImageElement;
+                          target.style.display = "none";
+                        }}
+                      />
+                    )}
+                    {m.videoUrl && <VideoPreview url={m.videoUrl} />}
+                    {m.doc && (
+                      <ChatDocCard name={m.doc.name} url={m.doc.url} size={m.doc.size} />
+                    )}
+                  </>
                 )}
-                {m.videoUrl && <VideoPreview url={m.videoUrl} />}
-                {m.doc && (
-                  <ChatDocCard name={m.doc.name} url={m.doc.url} size={m.doc.size} />
+                {m.isReviewer && (
+                  <div className="cabinet-chat__actions">
+                    <button
+                      type="button"
+                      className="cabinet-chat__action-btn"
+                      onClick={() => {
+                        setEditingMessageId(m.id);
+                        setEditingText(m.body || "");
+                      }}
+                    >
+                      Редагувати
+                    </button>
+                    <button
+                      type="button"
+                      className="cabinet-chat__action-btn cabinet-chat__action-btn--danger"
+                      onClick={() => void deleteMessage(m.id)}
+                    >
+                      Видалити
+                    </button>
+                  </div>
                 )}
                 <span className="cabinet-chat__date">
                   {new Date(m.createdAt + "Z").toLocaleString("uk-UA")}

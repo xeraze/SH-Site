@@ -1407,7 +1407,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: 1300;
 }
 
 .profile-modal {
@@ -1452,6 +1452,44 @@
   border-radius: 6px;
   margin-top: 6px;
   display: block;
+}
+
+.cabinet-chat__edit {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.cabinet-chat__edit textarea {
+  width: min(100%, 460px);
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  border-radius: 8px;
+  padding: 0.6rem 0.75rem;
+  resize: vertical;
+  min-height: 80px;
+}
+
+.cabinet-chat__edit-actions,
+.cabinet-chat__actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.cabinet-chat__action-btn {
+  background: rgba(24, 120, 255, 0.1);
+  border: 1px solid rgba(24, 120, 255, 0.2);
+  border-radius: 999px;
+  padding: 0.35rem 0.7rem;
+  color: #1a5edc;
+  cursor: pointer;
+}
+
+.cabinet-chat__action-btn--danger {
+  color: #b42318;
+  border-color: rgba(180, 35, 24, 0.2);
+  background: rgba(180, 35, 24, 0.08);
 }
 
 .cabinet-chat__attach {
@@ -1705,7 +1743,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1200;
+  z-index: 1400;
   cursor: zoom-out;
 }
 
