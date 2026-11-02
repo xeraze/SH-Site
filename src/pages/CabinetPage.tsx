@@ -866,6 +866,7 @@ function AppItem({ app, user }: { app: ApplicationItem; user: PublicUser }) {
 
   const deleteMessage = async (messageId: string) => {
     if (!window.confirm("Видалити це повідомлення?")) return;
+    setErr(null);
     const res = await deleteApplicationMessage(app.id, messageId);
     if (!res.ok) {
       setErr(res.error);
@@ -881,6 +882,7 @@ function AppItem({ app, user }: { app: ApplicationItem; user: PublicUser }) {
       setErr("Повідомлення не може бути порожнім");
       return;
     }
+    setErr(null);
     const res = await updateApplicationMessage(app.id, messageId, body);
     if (!res.ok) {
       setErr(res.error);
@@ -1182,6 +1184,7 @@ function AppointmentChat({ appointment, user }: { appointment: AppointmentItem; 
 
   const deleteMessage = async (messageId: string) => {
     if (!window.confirm("Видалити це повідомлення?")) return;
+    setErr(null);
     const res = await deleteAppointmentMessage(appointment.id, messageId);
     if (!res.ok) {
       setErr(res.error);
@@ -1197,6 +1200,7 @@ function AppointmentChat({ appointment, user }: { appointment: AppointmentItem; 
       setErr("Повідомлення не може бути порожнім");
       return;
     }
+    setErr(null);
     const res = await updateAppointmentMessage(appointment.id, messageId, body);
     if (!res.ok) {
       setErr(res.error);

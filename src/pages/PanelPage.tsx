@@ -125,6 +125,7 @@ function ReviewChat({
 
   const deleteMessage = async (messageId: string) => {
     if (!window.confirm("Видалити це повідомлення?")) return;
+    setErr(null);
     const res = await deleteApplicationMessage(app.id, messageId);
     if (!res.ok) {
       setErr(res.error);
@@ -141,6 +142,7 @@ function ReviewChat({
       setErr("Повідомлення не може бути порожнім");
       return;
     }
+    setErr(null);
     const res = await updateApplicationMessage(app.id, messageId, body);
     if (!res.ok) {
       setErr(res.error);
@@ -2056,6 +2058,7 @@ function PanelAppointmentChat({
 
   const deleteMessage = async (messageId: string) => {
     if (!window.confirm("Видалити це повідомлення?")) return;
+    setErr(null);
     const res = await deleteAppointmentMessage(appointment.id, messageId);
     if (!res.ok) {
       setErr(res.error);
@@ -2072,6 +2075,7 @@ function PanelAppointmentChat({
       setErr("Повідомлення не може бути порожнім");
       return;
     }
+    setErr(null);
     const res = await updateAppointmentMessage(appointment.id, messageId, body);
     if (!res.ok) {
       setErr(res.error);
