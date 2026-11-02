@@ -877,7 +877,7 @@
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.45);
-  z-index: 1100;
+  z-index: 2000;
   display: flex;
   align-items: stretch;
   justify-content: center;
@@ -893,6 +893,8 @@
   display: flex;
   flex-direction: column;
   min-height: 0;
+  position: relative;
+  z-index: 1;
 }
 
 .users-modal__head {
@@ -1280,7 +1282,19 @@
 .panel-users__actions {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-start;
   gap: 0.3rem;
+  min-width: 250px;
+}
+
+.panel-users__actions .cabinet-logout {
+  min-width: 2.2rem;
+  min-height: 2rem;
+  padding: 0.25rem 0.45rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .panel-users__warn {
@@ -1407,7 +1421,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1300;
+  z-index: 2000;
 }
 
 .profile-modal {
@@ -1418,6 +1432,8 @@
   max-height: 80vh;
   overflow-y: auto;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  position: relative;
+  z-index: 1;
 }
 
 .profile-modal__head {
@@ -1596,7 +1612,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1100;
+  z-index: 2100;
   padding: 1rem;
 }
 
@@ -1609,6 +1625,8 @@
   flex-direction: column;
   overflow: hidden;
   box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2);
+  position: relative;
+  z-index: 1;
 }
 
 .chat-modal__head {
@@ -1743,14 +1761,16 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1400;
+  z-index: 2200;
   cursor: zoom-out;
+  padding: 2rem;
 }
 
 .profile-zoom-img {
-  max-width: 90vw;
-  max-height: 90vh;
+  max-width: min(80vw, 820px);
+  max-height: 85vh;
   object-fit: contain;
-  border-radius: 4px;
+  border-radius: 8px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  background: rgba(255, 255, 255, 0.06);
 }

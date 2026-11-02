@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Icon } from "@iconify/react";
 import { ROLE_LABELS_UI, ROLE_ICONS_UI } from "../data/roles";
 
@@ -25,6 +25,15 @@ export function ProfileModal({
   const [zoomed, setZoomed] = useState(false);
   const roles = (user.roles ?? []).filter((r) => r !== "sysadmin");
   const empty = "Порожньо";
+
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, []);
+
   return (
     <div className="profile-modal-overlay" onClick={onClose}>
       <div className="profile-modal" onClick={(e) => e.stopPropagation()}>
@@ -78,12 +87,13 @@ export function ProfileModal({
         </div>
       </div>
       {zoomed && user.avatar && (
-        <div className="profile-zoom-overlay" onClick={() => setZoomed(false)}>
+        <div className="profile-zoom-overlay" onClick={(e) => { e.stopPropagation(); setZoomed(false); }}>
           <img
             src={user.avatar}
             alt=""
             className="profile-zoom-img"
             onContextMenu={(e) => e.preventDefault()}
+            onClick={(e) => e.stopPropagation()}
             draggable={false}
           />
         </div>
