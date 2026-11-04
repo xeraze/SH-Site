@@ -417,6 +417,7 @@ export interface AdminUserItem {
   createdAt: string;
   warnings: number;
   warningReason: string | null;
+  warningList?: { n: number; reason: string | null; createdAt: string }[];
   blockedUntil: string | null;
 }
 
@@ -530,6 +531,47 @@ export async function fetchAuditLog(): Promise<AuditEntry[]> {
   const res = await apiFetch<{ entries: AuditEntry[] }>("/api/admin/audit");
   if (!res.ok) return [];
   return res.data.entries;
+}
+
+export interface AuditArchiveItem {
+  month: string;
+  size: number;
+  entries: number;
+  createdAt: string;
+  available: boolean;
+}
+
+export async function fetchAuditArchives(): Promise<AuditArchiveItem[]> {
+  const res = await apiFetch<{ archives: AuditArchiveItem[] }>(
+    "/api/admin/audit/archives",
+  );
+  if (!res.ok) return [];
+  return res.data.archives;
+}
+
+export async function downloadAuditArchive(
+  month: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const headers: Record<string, string> = {};
+  const token = getToken();
+  if (token) headers.Authorization = `Bearer ${token}`;
+  try {
+    const res = await fetch(`${API_BASE}/api/admin/audit/archives/${month}`, { headers });
+    if (!res.ok) {
+      const data = (await res.json().catch(() => ({}))) as { error?: string };
+      return { ok: false, error: data.error ?? "Не вдалося завантажити архів" };
+    }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `audit-${month}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    return { ok: true };
+  } catch {
+    return { ok: false, error: "Сервер недоступний" };
+  }
 }
 
 export async function fetchAccountRequests(): Promise<AccountRequestItem[]> {
@@ -823,7 +865,7 @@ export async function adminArchiveClear(): Promise<
     { method: "POST" },
   );
   if (!res.ok || typeof res.data?.deleted !== "number") {
-    return { ok: false, error: res.error ?? res.data?.error ?? "Помилка" };
+    return { ok: false, error: res.ok ? (res.data.error ?? "Помилка") : res.error };
   }
   return { ok: true, deleted: res.data.deleted };
 }

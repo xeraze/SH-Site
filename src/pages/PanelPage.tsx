@@ -21,8 +21,10 @@ import {
   fetchApplicationsReview,
   fetchAppointmentMessages,
   fetchAppointmentsQueue,
+  fetchAuditArchives,
   fetchAuditLog,
   fetchInvites,
+  downloadAuditArchive,
   fetchMessages,
   fetchMe,
   fetchUserWarnings,
@@ -39,6 +41,7 @@ import {
   type AdminUserItem,
   type ApplicationItem,
   type AppointmentItem,
+  type AuditArchiveItem,
   type AuditEntry,
   type DialogueMessage,
   type InviteItem,
@@ -80,6 +83,7 @@ const AUDIT_ACTION_LABELS: Record<string, string> = {
   "application.create": "Подання звернення",
   warn: "Попередження",
   "warn.block": "Попередження (з блокуванням)",
+  "warning.remove": "Видалено попередження",
   timeout: "Тимчасова блокування",
   unblock: "Розблокування",
   "user.ban": "Блокування акаунта",
@@ -89,11 +93,15 @@ const AUDIT_ACTION_LABELS: Record<string, string> = {
   "invite.create": "Надіслано запрошення",
   "application.status": "Рішення за зверненням",
   "application.dialogue_close": "Діалог за зверненням завершено",
+  "application.message": "Повідомлення у діалозі звернення",
   "appointment.create": "Подання запису на прийом",
   "appointment.status": "Рішення за записом",
   "appointment.dialogue_close": "Діалог за записом завершено",
+  "appointment.message": "Повідомлення у діалозі запису",
   "account_request.resolve": "Запит на експорт / видалення",
 };
+
+const AUDIT_MESSAGE_ACTIONS = new Set(["application.message", "appointment.message"]);
 
 type PanelTab = "appeals" | "jobs" | "callcenter" | "constructor" | "roles" | "users";
 
@@ -2429,20 +2437,26 @@ function UsersBanPanel() {
   const [auditDateFrom, setAuditDateFrom] = useState("");
   const [auditDateTo, setAuditDateTo] = useState("");
   const [auditActorF, setAuditActorF] = useState("");
+  const [auditMsgs, setAuditMsgs] = useState(false);
+  const [archives, setArchives] = useState<AuditArchiveItem[]>([]);
   const [warnUser, setWarnUser] = useState<AdminUserItem | null>(null);
   const [warnItems, setWarnItems] = useState<WarningHistoryItem[]>([]);
   const [warnLoading, setWarnLoading] = useState(false);
 
   const allAuditActions = [...new Set([
-    "application.create", "warn", "warn.block", "timeout", "unblock",
+    "application.create", "warn", "warn.block", "warning.remove", "timeout", "unblock",
     "user.ban", "user.unban", "user.delete",
     "role.assign", "invite.create",
-    "application.status", "application.dialogue_close",
+    "application.status", "application.dialogue_close", "application.message",
     "appointment.create", "appointment.status", "appointment.dialogue_close",
+    "appointment.message",
     "account_request.resolve",
   ])].sort();
 
   const filteredAudit = audit.filter((e) => {
+    if (AUDIT_MESSAGE_ACTIONS.has(e.action) && !auditMsgs && auditActionF !== e.action) {
+      return false;
+    }
     const q = auditQuery.trim().toLowerCase();
     if (q && !e.action.toLowerCase().includes(q)
       && !(e.details ?? "").toLowerCase().includes(q)
@@ -2485,14 +2499,16 @@ function UsersBanPanel() {
   };
 
   const load = useCallback(async () => {
-    const [list, reqs, auditLog] = await Promise.all([
+    const [list, reqs, auditLog, archiveList] = await Promise.all([
       fetchAdminUsers(),
       fetchAccountRequests(),
       fetchAuditLog(),
+      fetchAuditArchives(),
     ]);
     setUsers(list);
     setRequests(reqs.filter((r) => r.status === "pending"));
     setAudit(auditLog);
+    setArchives(archiveList);
     setErr(list.length ? null : "Не вдалося завантажити користувачів");
     setLoading(false);
     const me = await fetchMe();
@@ -2504,6 +2520,11 @@ function UsersBanPanel() {
     setWarnLoading(true);
     setWarnItems(await fetchUserWarnings(u.id));
     setWarnLoading(false);
+  };
+
+  const onDownloadArchive = async (month: string) => {
+    const res = await downloadAuditArchive(month);
+    if (!res.ok) setErr(res.error);
   };
 
   const removeWarning = async (warningId: string) => {
@@ -2753,6 +2774,14 @@ function UsersBanPanel() {
               До
               <input type="date" value={auditDateTo} onChange={(e) => setAuditDateTo(e.target.value)} />
             </label>
+            <label className="audit-toolbar__filter audit-toolbar__check">
+              <input
+                type="checkbox"
+                checked={auditMsgs}
+                onChange={(e) => setAuditMsgs(e.target.checked)}
+              />
+              Повідомлення
+            </label>
             <button
               type="button"
               className="cabinet-logout"
@@ -2779,6 +2808,41 @@ function UsersBanPanel() {
               ))}
             </ul>
           )}
+
+          <div className="audit-archives">
+            <div className="cabinet-settings__group">Місячні архіви (48 годин)</div>
+            {archives.length === 0 ? (
+              <p className="cabinet-profile-note">
+                Архівів поки що немає. Попередні місяці архівуються автоматично після
+                1-го числа.
+              </p>
+            ) : (
+              <ul className="audit-list">
+                {archives.map((a) => (
+                  <li key={a.month} className="audit-list__item">
+                    <span className="audit-list__date">{a.month}</span>
+                    <span className="audit-list__action">{a.entries} записів</span>
+                    <span className="audit-list__actor">
+                      {Math.max(1, Math.round(a.size / 1024))} КБ
+                    </span>
+                    {a.available ? (
+                      <button
+                        type="button"
+                        className="cabinet-logout"
+                        onClick={() => void onDownloadArchive(a.month)}
+                      >
+                        <Icon icon="mdi:download" width={15} height={15} />
+                      </button>
+                    ) : (
+                      <span className="audit-list__details">
+                        Термін завантаження минув (48 годин)
+                      </span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         </div>
       </div>
 
@@ -2925,9 +2989,28 @@ function UsersBanPanel() {
                         <span>
                           Активний
                           {u.warnings > 0 && (
-                            <span className="panel-users__warn" title={u.warningReason ?? ""}>
-                              <Icon icon="mdi:alert-outline" width={13} height={13} />{" "}
-                              {u.warnings}
+                            <span className="panel-users__warn-set">
+                              {(u.warningList ?? []).length > 0 ? (
+                                (u.warningList ?? []).map((w) => (
+                                  <span
+                                    key={w.n}
+                                    className="panel-users__warn"
+                                    title={w.reason ?? "Без причини"}
+                                    onClick={() => void openWarnings(u)}
+                                  >
+                                    {w.n}
+                                  </span>
+                                ))
+                              ) : (
+                                <span
+                                  className="panel-users__warn"
+                                  title={u.warningReason ?? ""}
+                                  onClick={() => void openWarnings(u)}
+                                >
+                                  <Icon icon="mdi:alert-outline" width={13} height={13} />{" "}
+                                  {u.warnings}
+                                </span>
+                              )}
                             </span>
                           )}
                         </span>
@@ -2935,14 +3018,6 @@ function UsersBanPanel() {
                     </td>
                     <td>
                       <div className="panel-users__actions">
-                        <button
-                          type="button"
-                          className="cabinet-logout"
-                          title="Історія попереджень"
-                          onClick={() => void openWarnings(u)}
-                        >
-                          <Icon icon="mdi:history" width={15} height={15} />
-                        </button>
                         {!u.banned && u.id !== meId && (
                           <>
                             <button

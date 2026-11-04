@@ -1423,7 +1423,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 2000;
+  z-index: 2150;
 }
 
 .profile-modal {
@@ -1795,4 +1795,43 @@
   border-radius: 8px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
   background: rgba(255, 255, 255, 0.06);
+}
+
+.audit-toolbar__check {
+  cursor: pointer;
+  user-select: none;
+}
+
+.audit-toolbar__check input {
+  padding: 0;
+  border: none;
+  accent-color: var(--color-teal, #0f766e);
+}
+
+.audit-archives {
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px dashed var(--color-line, #c9d3df);
+}
+
+.panel-users__warn-set {
+  display: inline-flex;
+  gap: 0.2rem;
+  margin-left: 0.35rem;
+  vertical-align: middle;
+}
+
+.panel-users__warn-set .panel-users__warn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.15rem;
+  height: 1.15rem;
+  padding: 0 0.3rem;
+  border: 1px solid #b7791f;
+  background: #fefcbf;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  line-height: 1;
+  cursor: pointer;
 }

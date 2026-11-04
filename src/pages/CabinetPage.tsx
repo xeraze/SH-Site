@@ -45,6 +45,7 @@ import {
   type SettingsField,
 } from "../api";
 import { Link } from "../components/AppLink";
+import { hrefFor } from "../utils/links";
 import { PortalLayout } from "../components/PortalLayout";
 import { VideoPreview } from "../components/Announcements";
 import {
@@ -358,8 +359,8 @@ export function CabinetPage() {
     const me = await fetchMe();
     setUser(me);
     if (me) {
-      if (me.needsProfile && window.location.pathname !== "/kabinet") {
-        window.location.assign("/kabinet?tab=profile");
+      if (me.needsProfile && window.location.pathname !== hrefFor("/kabinet")) {
+        window.location.assign(hrefFor("/kabinet?tab=profile"));
         return;
       }
       void loadUnread();
@@ -475,7 +476,7 @@ export function CabinetPage() {
     setUser(newUser);
     setAuthError(null);
     if (newUser.needsProfile) {
-      window.location.assign("/kabinet?tab=profile");
+      window.location.assign(hrefFor("/kabinet?tab=profile"));
       return;
     }
     void loadUnread();
