@@ -4,7 +4,6 @@ const TOKEN_KEY = "sh_token";
 export interface RoleLabel {
   role: string;
   label: string;
-  icon: string;
 }
 
 export interface PublicUser {
@@ -323,10 +322,11 @@ export async function setPassword(
 
 export async function emailChangeStart(
   email: string,
+  password: string,
 ): Promise<{ ok: true; challengeId: string } | { ok: false; error: string }> {
   const res = await apiFetch<AuthChallengeStart>("/api/auth/email-change/start", {
     method: "POST",
-    body: { email },
+    body: { email, password },
   });
   if (!res.ok) return { ok: false, error: res.error };
   return { ok: true, challengeId: res.data.challengeId };

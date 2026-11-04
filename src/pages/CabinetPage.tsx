@@ -48,12 +48,12 @@ import { Link } from "../components/AppLink";
 import { hrefFor } from "../utils/links";
 import { PortalLayout } from "../components/PortalLayout";
 import { VideoPreview } from "../components/Announcements";
+import { ChatDocCard, ChatImage } from "../components/ChatFiles";
 import {
-  ChatDocCard,
   compressImageForChat,
   formatFileSize,
   readDocDataUrl,
-} from "../components/ChatFiles";
+} from "../utils/chatFiles";
 import { ROLE_ICONS_UI } from "../data/roles";
 import "./CabinetPage.css";
 import "../components/Announcements.css";
@@ -858,8 +858,6 @@ function AppItem({ app, user }: { app: ApplicationItem; user: PublicUser }) {
   const isStaffUser = user.roles.some((role) => role !== "patient");
 
   const canManageMessage = (message: DialogueMessage) => {
-    // Будь-який користувач може керувати власними повідомленнями;
-    // sysadmin також може керувати повідомленнями рецензентів
     if (message.senderId === user.id) return true;
     if (isStaffUser && user.roles.includes("sysadmin") && message.isReviewer) return true;
     return false;
@@ -929,7 +927,7 @@ function AppItem({ app, user }: { app: ApplicationItem; user: PublicUser }) {
     }
     const res = await sendMessage(
       app.id,
-      text.trim() || "📎",
+      text.trim(),
       imageUrl,
       video || undefined,
       doc ?? undefined,
@@ -949,10 +947,7 @@ function AppItem({ app, user }: { app: ApplicationItem; user: PublicUser }) {
   const decided = app.status === "accepted" || app.status === "rejected";
   const closed = !!app.dialogueClosedAt || closedLocal;
   const chatAvailable = !decided && !closed && app.status !== "new";
-
-  useEffect(() => {
-    if (closed) setOpen(false);
-  }, [closed]);
+  const historyOnly = decided || closed;
 
   return (
     <li className="cabinet-apps__item">
@@ -970,13 +965,13 @@ function AppItem({ app, user }: { app: ApplicationItem; user: PublicUser }) {
           Причина: {app.decisionNote || "Не вказана"}
         </div>
       )}
-      {chatAvailable && (
+      {(chatAvailable || historyOnly) && (
         <button
           type="button"
           className="cabinet-logout cabinet-chat-toggle"
           onClick={() => setOpen((v) => !v)}
         >
-          {open ? "Закрити діалог" : "Відкрити діалог"}
+          {chatAvailable ? (open ? "Закрити діалог" : "Відкрити діалог") : "Історія діалогу"}
         </button>
       )}
       {!decided && !closed && !chatAvailable && (
@@ -985,7 +980,7 @@ function AppItem({ app, user }: { app: ApplicationItem; user: PublicUser }) {
       {!decided && closed && (
         <div className="cabinet-apps__note">Діалог завершено</div>
       )}
-      {open && chatAvailable && (
+      {open && (chatAvailable || historyOnly) && (
         <div className="chat-modal-overlay" onClick={() => setOpen(false)}>
           <div className="chat-modal" onClick={(e) => e.stopPropagation()}>
             <div className="chat-modal__head">
@@ -1037,15 +1032,7 @@ function AppItem({ app, user }: { app: ApplicationItem; user: PublicUser }) {
                     <>
                       {m.body && <p>{m.body}</p>}
                       {m.imageUrl && (
-                        <img
-                          src={m.imageUrl}
-                          alt=""
-                          className="cabinet-chat__img"
-                          onError={(e) => {
-                            const target = e.currentTarget as HTMLImageElement;
-                            target.style.display = "none";
-                          }}
-                        />
+                        <ChatImage url={m.imageUrl} />
                       )}
                       {m.videoUrl && <VideoPreview url={m.videoUrl} />}
                       {m.doc && (
@@ -1053,7 +1040,7 @@ function AppItem({ app, user }: { app: ApplicationItem; user: PublicUser }) {
                       )}
                     </>
                   )}
-                  {canManageMessage(m) && (
+                  {chatAvailable && canManageMessage(m) && (
                     <div className="cabinet-chat__actions">
                       {m.senderId === user.id && (
                         <button
@@ -1083,6 +1070,7 @@ function AppItem({ app, user }: { app: ApplicationItem; user: PublicUser }) {
             </ul>
           )}
           {err && <p className="cabinet-profile-error">{err}</p>}
+          {chatAvailable && (
           <form onSubmit={onSend} className="cabinet-chat__form">
             <input
               type="text"
@@ -1092,7 +1080,7 @@ function AppItem({ app, user }: { app: ApplicationItem; user: PublicUser }) {
               maxLength={2000}
             />
             <label className="cabinet-chat__attach" title="Прикріпити зображення">
-              📎
+              <Icon icon="mdi:image-plus" width={18} height={18} />
               <input
                 type="file"
                 accept="image/*"
@@ -1101,7 +1089,7 @@ function AppItem({ app, user }: { app: ApplicationItem; user: PublicUser }) {
               />
             </label>
             <label className="cabinet-chat__attach" title="Прикріпити документ (PDF, TXT, DOC, DOCX)">
-              📄
+              <Icon icon="mdi:file-document-plus-outline" width={18} height={18} />
               <input
                 type="file"
                 accept=".pdf,.txt,.doc,.docx"
@@ -1152,6 +1140,7 @@ function AppItem({ app, user }: { app: ApplicationItem; user: PublicUser }) {
               </div>
             )}
           </form>
+          )}
             </div>
           </div>
         </div>
@@ -1176,8 +1165,6 @@ function AppointmentChat({ appointment, user }: { appointment: AppointmentItem; 
   const isStaffUser = user.roles.some((role) => role !== "patient");
 
   const canManageMessage = (message: DialogueMessage) => {
-    // Будь-який користувач може керувати власними повідомленнями;
-    // sysadmin також може керувати повідомленнями рецензентів
     if (message.senderId === user.id) return true;
     if (isStaffUser && user.roles.includes("sysadmin") && message.isReviewer) return true;
     return false;
@@ -1229,10 +1216,6 @@ function AppointmentChat({ appointment, user }: { appointment: AppointmentItem; 
     return () => window.clearInterval(t);
   }, [open, loadMessages]);
 
-  useEffect(() => {
-    if (closed) setOpen(false);
-  }, [closed]);
-
   const onSend = async (e: React.FormEvent) => {
     e.preventDefault();
     const video = videoUrl.trim();
@@ -1256,7 +1239,7 @@ function AppointmentChat({ appointment, user }: { appointment: AppointmentItem; 
     }
     const res = await sendAppointmentMessage(
       appointment.id,
-      body || "📎",
+      body,
       imageUrl,
       video || undefined,
       doc ?? undefined,
@@ -1275,9 +1258,9 @@ function AppointmentChat({ appointment, user }: { appointment: AppointmentItem; 
 
   return (
     <div className="cabinet-chat">
-      {chatAvailable && (
+      {(chatAvailable || closed) && (
         <button type="button" className="cabinet-chat__toggle" onClick={() => setOpen(!open)}>
-          {open ? "Закрити чат" : "Чат з адміністрацією"}
+          {chatAvailable ? (open ? "Закрити чат" : "Чат з адміністрацією") : "Історія діалогу"}
         </button>
       )}
       {!terminal && !dialogueClosed && appointment.status === "new" && (
@@ -1286,7 +1269,7 @@ function AppointmentChat({ appointment, user }: { appointment: AppointmentItem; 
       {!terminal && dialogueClosed && (
         <div className="cabinet-apps__note">Діалог завершено</div>
       )}
-      {open && chatAvailable && (
+      {open && (chatAvailable || closed) && (
         <div className="chat-modal-overlay" onClick={() => setOpen(false)}>
           <div className="chat-modal" onClick={(e) => e.stopPropagation()}>
             <div className="chat-modal__head">
@@ -1335,15 +1318,7 @@ function AppointmentChat({ appointment, user }: { appointment: AppointmentItem; 
                   <>
                     {m.body && <p>{m.body}</p>}
                     {m.imageUrl && (
-                      <img
-                        src={m.imageUrl}
-                        alt=""
-                        className="cabinet-chat__img"
-                        onError={(e) => {
-                          const target = e.currentTarget as HTMLImageElement;
-                          target.style.display = "none";
-                        }}
-                      />
+                      <ChatImage url={m.imageUrl} />
                     )}
                     {m.videoUrl && <VideoPreview url={m.videoUrl} />}
                     {m.doc && (
@@ -1351,7 +1326,7 @@ function AppointmentChat({ appointment, user }: { appointment: AppointmentItem; 
                     )}
                   </>
                 )}
-                {canManageMessage(m) && (
+                {chatAvailable && canManageMessage(m) && (
                   <div className="cabinet-chat__actions">
                     {m.senderId === user.id && (
                       <button
@@ -1383,6 +1358,7 @@ function AppointmentChat({ appointment, user }: { appointment: AppointmentItem; 
             ))}
           </ul>
           {err && <p className="cabinet-profile-error">{err}</p>}
+          {chatAvailable && (
           <form onSubmit={onSend} className="cabinet-chat__form">
             <input
               type="text"
@@ -1392,7 +1368,7 @@ function AppointmentChat({ appointment, user }: { appointment: AppointmentItem; 
               maxLength={2000}
             />
             <label className="cabinet-chat__attach" title="Прикріпити зображення">
-              📎
+              <Icon icon="mdi:image-plus" width={18} height={18} />
               <input
                 type="file"
                 accept="image/*"
@@ -1401,7 +1377,7 @@ function AppointmentChat({ appointment, user }: { appointment: AppointmentItem; 
               />
             </label>
             <label className="cabinet-chat__attach" title="Прикріпити документ (PDF, TXT, DOC, DOCX)">
-              📄
+              <Icon icon="mdi:file-document-plus-outline" width={18} height={18} />
               <input
                 type="file"
                 accept=".pdf,.txt,.doc,.docx"
@@ -1452,6 +1428,7 @@ function AppointmentChat({ appointment, user }: { appointment: AppointmentItem; 
               </div>
             )}
           </form>
+          )}
             </div>
           </div>
         </div>
@@ -1866,6 +1843,7 @@ function EmailChangeBlock({
 }) {
   const [open, setOpen] = useState(false);
   const [em, setEm] = useState("");
+  const [pw, setPw] = useState("");
   const [challenge, setChallenge] = useState<string | null>(null);
   const [code, setCode] = useState("");
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -1875,7 +1853,7 @@ function EmailChangeBlock({
     e.preventDefault();
     setBusy(true);
     setMsg(null);
-    const res = await emailChangeStart(em.trim().toLowerCase());
+    const res = await emailChangeStart(em.trim().toLowerCase(), pw);
     setBusy(false);
     if (!res.ok) {
       setMsg({ ok: false, text: res.error });
@@ -1902,6 +1880,7 @@ function EmailChangeBlock({
     setChallenge(null);
     setCode("");
     setEm("");
+    setPw("");
   };
 
   return (
@@ -1928,6 +1907,19 @@ function EmailChangeBlock({
                 required
               />
             </label>
+            {user.hasPassword && (
+              <label className="apps-field">
+                <span className="apps-field__label">Поточний пароль</span>
+                <input
+                  type="password"
+                  autoComplete="current-password"
+                  value={pw}
+                  onChange={(e) => setPw(e.target.value)}
+                  disabled={!!challenge}
+                  required
+                />
+              </label>
+            )}
             {challenge && (
               <label className="apps-field">
                 <span className="apps-field__label">6-значний код з листа</span>

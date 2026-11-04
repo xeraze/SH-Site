@@ -143,7 +143,6 @@
   border-style: inset;
 }
 
-/* Загальні блоки контенту */
 .p-block {
   background: var(--color-bg-raised);
   border: 2px solid var(--color-navy);

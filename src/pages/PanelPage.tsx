@@ -51,13 +51,13 @@ import {
 import { PortalLayout } from "../components/PortalLayout";
 import { VideoPreview } from "../components/Announcements";
 import { ProfileModal, type ProfileUser } from "../components/ProfileModal";
+import { ChatDocCard, ChatImage } from "../components/ChatFiles";
 import {
-  ChatDocCard,
   compressImageForChat,
   DOCS_MAX,
   formatFileSize,
   readDocDataUrl,
-} from "../components/ChatFiles";
+} from "../utils/chatFiles";
 import { renderMiniMarkdown, stripShortFormatting } from "../components/annMarkdown";
 import {
   ROLE_LABELS_UI,
@@ -81,10 +81,14 @@ const APPOINTMENT_STATUS_LABELS_UI: Record<string, string> = {
 
 const AUDIT_ACTION_LABELS: Record<string, string> = {
   "application.create": "Подання звернення",
+  "job.create": "Подання заявки на посаду",
+  "job.status": "Рішення за заявкою на посаду",
+  "job.dialogue_close": "Діалог за заявкою на посаду завершено",
+  "job.message": "Повідомлення у діалозі заявки на посаду",
   warn: "Попередження",
   "warn.block": "Попередження (з блокуванням)",
   "warning.remove": "Видалено попередження",
-  timeout: "Тимчасова блокування",
+  timeout: "Тимчасове блокування",
   unblock: "Розблокування",
   "user.ban": "Блокування акаунта",
   "user.unban": "Розблокування акаунта",
@@ -101,7 +105,7 @@ const AUDIT_ACTION_LABELS: Record<string, string> = {
   "account_request.resolve": "Запит на експорт / видалення",
 };
 
-const AUDIT_MESSAGE_ACTIONS = new Set(["application.message", "appointment.message"]);
+const AUDIT_MESSAGE_ACTIONS = new Set(["application.message", "job.message", "appointment.message"]);
 
 type PanelTab = "appeals" | "jobs" | "callcenter" | "constructor" | "roles" | "users";
 
@@ -209,7 +213,7 @@ function ReviewChat({
     }
     const res = await sendMessage(
       app.id,
-      text.trim() || "📎",
+      text.trim(),
       imageUrl,
       video || undefined,
       doc ?? undefined,
@@ -322,6 +326,15 @@ function ReviewChat({
           Діалог завершено
         </div>
       )}
+      {(decided || closed) && !open && (
+        <button
+          type="button"
+          className="cabinet-action cabinet-action--dialogue"
+          onClick={() => setOpen(true)}
+        >
+          Історія діалогу
+        </button>
+      )}
       {open && (
         <div className="chat-modal-overlay" onClick={() => setOpen(false)}>
           <div className="chat-modal" onClick={(e) => e.stopPropagation()}>
@@ -375,15 +388,7 @@ function ReviewChat({
                     <>
                       {m.body && <p>{m.body}</p>}
                       {m.imageUrl && (
-                        <img
-                          src={m.imageUrl}
-                          alt=""
-                          className="cabinet-chat__img"
-                          onError={(e) => {
-                            const target = e.currentTarget as HTMLImageElement;
-                            target.style.display = "none";
-                          }}
-                        />
+                        <ChatImage url={m.imageUrl} />
                       )}
                       {m.videoUrl && <VideoPreview url={m.videoUrl} />}
                       {m.doc && (
@@ -391,7 +396,7 @@ function ReviewChat({
                       )}
                     </>
                   )}
-                  {(m.senderId === user?.id || user?.roles.includes("sysadmin")) && (
+                  {!decided && !closed && (m.senderId === user?.id || user?.roles.includes("sysadmin")) && (
                     <div className="cabinet-chat__actions">
                       {m.senderId === user?.id && (
                         <button
@@ -428,7 +433,7 @@ function ReviewChat({
                 maxLength={2000}
               />
               <label className="cabinet-chat__attach" title="Прикріпити зображення">
-                📎
+                <Icon icon="mdi:image-plus" width={18} height={18} />
                 <input
                   type="file"
                   accept="image/*"
@@ -437,7 +442,7 @@ function ReviewChat({
                 />
               </label>
               <label className="cabinet-chat__attach" title="Прикріпити документ (PDF, TXT, DOC, DOCX)">
-                📄
+                <Icon icon="mdi:file-document-plus-outline" width={18} height={18} />
                 <input
                   type="file"
                   accept=".pdf,.txt,.doc,.docx"
@@ -694,7 +699,7 @@ function ReviewPanel({ kind, user }: { kind: "appeals" | "jobs"; user: PublicUse
                       </button>
                     </>
                   )}
-                  {(app.status === "reviewing" || app.status === "dialogue") && (
+                  {app.status !== "new" && (
                     <ReviewChat
                       app={app}
                       onChanged={() => void load()}
@@ -915,7 +920,7 @@ function AppointmentsQueue({ user }: { user: PublicUser | null }) {
                       </button>
                     </>
                   )}
-                  {(a.status === "in_progress" || a.status === "dialogue") && (
+                  {a.status !== "new" && (
                     <PanelAppointmentChat
                       appointment={a}
                       onChanged={() => void load()}
@@ -1938,12 +1943,14 @@ export function PanelPage() {
   if (isAssigner) tabs.push({ id: "roles", label: "Посади" });
   if (isSysadmin) tabs.push({ id: "users", label: "Адміністрування" });
 
+  const tabIds = tabs.map((t) => t.id).join(",");
+
   useEffect(() => {
-    if (!tabs.length) return;
+    if (!tabIds) return;
     const params = new URLSearchParams(window.location.search);
     const tabParam = params.get("tab");
     const appId = params.get("app");
-    if (tabParam && tabs.some((t) => t.id === tabParam)) {
+    if (tabParam && tabIds.split(",").includes(tabParam)) {
       setTab(tabParam as PanelTab);
     }
     if (appId) {
@@ -1954,7 +1961,7 @@ export function PanelPage() {
         target?.scrollIntoView({ behavior: "smooth", block: "center" });
       }, 120);
     }
-  }, [tabs]);
+  }, [tabIds]);
 
   const allowed = tabs.some((t) => t.id === tab);
   const activeTab = allowed ? tab : tabs[0]?.id ?? "appeals";
@@ -2137,7 +2144,7 @@ function PanelAppointmentChat({
     }
     const res = await sendAppointmentMessage(
       appointment.id,
-      body || "📎",
+      body,
       imageUrl,
       video || undefined,
       doc ?? undefined,
@@ -2241,7 +2248,16 @@ function PanelAppointmentChat({
       {dialogueClosed && !terminal && (
         <div className="cabinet-apps__note">Діалог завершено</div>
       )}
-      {open && !terminal && (
+      {(terminal || dialogueClosed) && !open && (
+        <button
+          type="button"
+          className="cabinet-action cabinet-action--dialogue"
+          onClick={() => setOpen(true)}
+        >
+          Історія діалогу
+        </button>
+      )}
+      {open && (
         <div className="chat-modal-overlay" onClick={() => setOpen(false)}>
           <div className="chat-modal" onClick={(e) => e.stopPropagation()}>
             <div className="chat-modal__head">
@@ -2291,15 +2307,7 @@ function PanelAppointmentChat({
                   <>
                     {m.body && <p>{m.body}</p>}
                     {m.imageUrl && (
-                      <img
-                        src={m.imageUrl}
-                        alt=""
-                        className="cabinet-chat__img"
-                        onError={(e) => {
-                          const target = e.currentTarget as HTMLImageElement;
-                          target.style.display = "none";
-                        }}
-                      />
+                      <ChatImage url={m.imageUrl} />
                     )}
                     {m.videoUrl && <VideoPreview url={m.videoUrl} />}
                     {m.doc && (
@@ -2307,7 +2315,7 @@ function PanelAppointmentChat({
                     )}
                   </>
                 )}
-                {(m.senderId === user?.id || user?.roles.includes("sysadmin")) && (
+                {!terminal && !dialogueClosed && (m.senderId === user?.id || user?.roles.includes("sysadmin")) && (
                   <div className="cabinet-chat__actions">
                     {m.senderId === user?.id && (
                       <button
@@ -2346,7 +2354,7 @@ function PanelAppointmentChat({
                 maxLength={2000}
               />
               <label className="cabinet-chat__attach" title="Прикріпити зображення">
-                📎
+                <Icon icon="mdi:image-plus" width={18} height={18} />
                 <input
                   type="file"
                   accept="image/*"
@@ -2355,7 +2363,7 @@ function PanelAppointmentChat({
                 />
               </label>
               <label className="cabinet-chat__attach" title="Прикріпити документ (PDF, TXT, DOC, DOCX)">
-                📄
+                <Icon icon="mdi:file-document-plus-outline" width={18} height={18} />
                 <input
                   type="file"
                   accept=".pdf,.txt,.doc,.docx"
@@ -2448,6 +2456,7 @@ function UsersBanPanel() {
     "user.ban", "user.unban", "user.delete",
     "role.assign", "invite.create",
     "application.status", "application.dialogue_close", "application.message",
+    "job.create", "job.status", "job.dialogue_close", "job.message",
     "appointment.create", "appointment.status", "appointment.dialogue_close",
     "appointment.message",
     "account_request.resolve",
@@ -2989,28 +2998,9 @@ function UsersBanPanel() {
                         <span>
                           Активний
                           {u.warnings > 0 && (
-                            <span className="panel-users__warn-set">
-                              {(u.warningList ?? []).length > 0 ? (
-                                (u.warningList ?? []).map((w) => (
-                                  <span
-                                    key={w.n}
-                                    className="panel-users__warn"
-                                    title={w.reason ?? "Без причини"}
-                                    onClick={() => void openWarnings(u)}
-                                  >
-                                    {w.n}
-                                  </span>
-                                ))
-                              ) : (
-                                <span
-                                  className="panel-users__warn"
-                                  title={u.warningReason ?? ""}
-                                  onClick={() => void openWarnings(u)}
-                                >
-                                  <Icon icon="mdi:alert-outline" width={13} height={13} />{" "}
-                                  {u.warnings}
-                                </span>
-                              )}
+                            <span className="panel-users__warn" title={u.warningReason ?? ""}>
+                              <Icon icon="mdi:alert-outline" width={13} height={13} />{" "}
+                              {u.warnings}
                             </span>
                           )}
                         </span>
@@ -3018,6 +3008,14 @@ function UsersBanPanel() {
                     </td>
                     <td>
                       <div className="panel-users__actions">
+                        <button
+                          type="button"
+                          className="cabinet-logout"
+                          title="Історія попереджень"
+                          onClick={() => void openWarnings(u)}
+                        >
+                          <Icon icon="mdi:history" width={15} height={15} />
+                        </button>
                         {!u.banned && u.id !== meId && (
                           <>
                             <button
@@ -3034,7 +3032,7 @@ function UsersBanPanel() {
                               className="cabinet-logout"
                               disabled={busyId === u.id}
                               onClick={() => void onTimeout(u)}
-                              title="Тимчасова блокування"
+                              title="Тимчасове блокування"
                             >
                               <Icon icon="mdi:timer-sand" width={15} height={15} />
                             </button>
@@ -3123,7 +3121,7 @@ function UsersBanPanel() {
                           : w.kind === "warn_block"
                             ? "Попередження (з блокуванням)"
                             : w.kind === "timeout"
-                              ? "Тимчасова блокування"
+                              ? "Тимчасове блокування"
                               : w.kind}
                       </span>
                       <span className="audit-list__actor">{w.issuedBy?.name ?? "—"}</span>

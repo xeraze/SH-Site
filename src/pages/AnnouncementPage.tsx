@@ -36,7 +36,6 @@ export function AnnouncementPage() {
         });
         return;
       } catch {
-        // користувач закрив або share недоступний — копіюємо
       }
     }
     if (await copyText(url)) {

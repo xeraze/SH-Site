@@ -273,7 +273,6 @@
   cursor: not-allowed;
 }
 
-/* Feed page */
 .ann-feed-section + .ann-feed-section {
   margin-top: 1.4rem;
 }
@@ -330,7 +329,6 @@
   cursor: pointer;
 }
 
-/* compact preview cards */
 .ann-list {
   gap: 0.5rem;
 }
@@ -368,7 +366,6 @@
   color: var(--color-teal, #2e8b8b);
 }
 
-/* detail page */
 .ann-detail__title {
   margin: 0.1rem 0 0.5rem;
   font-size: 1.15rem;
