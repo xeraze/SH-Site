@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Icon } from "@iconify/react";
 import {
   acceptInvite,
@@ -102,6 +102,63 @@ function AuthBox({
   const [info, setInfo] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [googleMode, setGoogleMode] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState("");
+  const [turnstileError, setTurnstileError] = useState<string | null>(null);
+  const turnstileContainer = useRef<HTMLDivElement | null>(null);
+  const turnstileWidgetId = useRef<string | null>(null);
+  const turnstileSiteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY || "0x4AAAAAAFzibgzYFI9dgjMs";
+
+  useEffect(() => {
+    type TurnstileApi = {
+      render: (container: HTMLElement, options: {
+        sitekey: string;
+        callback: (token: string) => void;
+        "error-callback": () => void;
+        "expired-callback": () => void;
+        theme?: "auto" | "light" | "dark";
+      }) => string;
+      reset: (widgetId?: string) => void;
+      remove: (widgetId: string) => void;
+    };
+    const getApi = () => (window as Window & { turnstile?: TurnstileApi }).turnstile;
+    const renderWidget = () => {
+      const api = getApi();
+      if (!api || !turnstileContainer.current || turnstileWidgetId.current) return;
+      turnstileWidgetId.current = api.render(turnstileContainer.current, {
+        sitekey: turnstileSiteKey,
+        callback: (token) => { setTurnstileToken(token); setTurnstileError(null); },
+        "error-callback": () => { setTurnstileToken(""); setTurnstileError("Не вдалося завантажити перевірку. Оновіть сторінку."); },
+        "expired-callback": () => { setTurnstileToken(""); setTurnstileError("Час перевірки минув. Підтвердіть ще раз."); },
+        theme: "auto",
+      });
+    };
+    const existing = document.getElementById("cloudflare-turnstile-script") as HTMLScriptElement | null;
+    if (getApi()) {
+      renderWidget();
+    } else if (existing) {
+      existing.addEventListener("load", renderWidget, { once: true });
+    } else {
+      const script = document.createElement("script");
+      script.id = "cloudflare-turnstile-script";
+      script.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
+      script.async = true;
+      script.defer = true;
+      script.addEventListener("load", renderWidget, { once: true });
+      script.addEventListener("error", () => setTurnstileError("Не вдалося завантажити перевірку. Перевірте з’єднання."), { once: true });
+      document.head.appendChild(script);
+    }
+    return () => {
+      const api = getApi();
+      if (api && turnstileWidgetId.current) api.remove(turnstileWidgetId.current);
+      turnstileWidgetId.current = null;
+    };
+  }, [turnstileSiteKey]);
+
+  const resetTurnstile = () => {
+    setTurnstileToken("");
+    const api = (window as Window & { turnstile?: { reset: (widgetId?: string) => void } }).turnstile;
+    if (api && turnstileWidgetId.current) api.reset(turnstileWidgetId.current);
+  };
 
   useEffect(() => {
     if (googleChallengeId) {
@@ -119,6 +176,8 @@ function AuthBox({
     setInfo(null);
     setCode("");
     setGoogleMode(false);
+    setTurnstileError(null);
+    resetTurnstile();
     onGoogleChallengeUsed?.();
   };
 
@@ -127,10 +186,16 @@ function AuthBox({
     setBusy(true);
     setErr(null);
     setInfo(null);
+    if (!turnstileToken) {
+      setBusy(false);
+      setTurnstileError("Підтвердіть, що ви не робот.");
+      return;
+    }
     const cleanEmail = email.trim().toLowerCase();
     if (mode === "login") {
-      const res = await loginPassword(cleanEmail, password);
+      const res = await loginPassword(cleanEmail, password, turnstileToken);
       setBusy(false);
+      resetTurnstile();
       if (!res.ok) {
         if (res.error.includes("зареєстровано")) {
           setErr(res.error);
@@ -149,8 +214,10 @@ function AuthBox({
     const res = await registerStart({
       email: cleanEmail,
       password,
+      turnstileToken,
     });
     setBusy(false);
+    resetTurnstile();
     if (!res.ok) {
       if (res.error.includes("зареєстровано")) {
         setErr("Цей email уже зареєстровано. Увійдіть у кабінет.");
@@ -219,6 +286,11 @@ function AuthBox({
           </p>
         )}
 
+        <div style={{ display: step === "form" ? undefined : "none" }}>
+          <div className="cabinet-turnstile" ref={turnstileContainer} />
+          {turnstileError && <p className="cabinet-auth-msg cabinet-auth-msg--err">{turnstileError}</p>}
+        </div>
+
         {step === "form" ? (
           <form onSubmit={onStart} className="cabinet-auth-form">
             <label className="apps-field">
@@ -260,7 +332,7 @@ function AuthBox({
 
             {err && <p className="cabinet-auth-msg cabinet-auth-msg--err">{err}</p>}
             {info && <p className="cabinet-auth-msg cabinet-auth-msg--ok">{info}</p>}
-            <button type="submit" className="portal-cta" disabled={busy}>
+            <button type="submit" className="portal-cta" disabled={busy || !turnstileToken}>
               {busy ? "Зачекайте..." : mode === "login" ? "Увійти" : "Надіслати код"}
             </button>
           </form>

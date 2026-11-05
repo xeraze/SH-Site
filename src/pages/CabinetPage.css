@@ -757,6 +757,10 @@
   gap: 0.7rem;
 }
 
+.cabinet-turnstile {
+  min-height: 65px;
+}
+
 .cabinet-auth-form .apps-field {
   display: flex;
   flex-direction: column;

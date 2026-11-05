@@ -263,6 +263,7 @@ export interface AuthVerifyResult {
 export async function registerStart(input: {
   email: string;
   password: string;
+  turnstileToken: string;
 }): Promise<{ ok: true; challengeId: string } | { ok: false; error: string }> {
   const res = await apiFetch<AuthChallengeStart>("/api/auth/register/start", {
     method: "POST",
@@ -287,10 +288,11 @@ export async function registerVerify(
 export async function loginPassword(
   email: string,
   password: string,
+  turnstileToken: string,
 ): Promise<{ ok: true; challengeId: string; email: string } | { ok: false; error: string }> {
   const res = await apiFetch<{ challengeId: string; email: string }>("/api/auth/login/password", {
     method: "POST",
-    body: { email, password },
+    body: { email, password, turnstileToken },
   });
   if (!res.ok) return { ok: false, error: res.error };
   return { ok: true, challengeId: res.data.challengeId, email: res.data.email };
