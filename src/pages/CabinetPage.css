@@ -147,6 +147,7 @@
   border: 1px solid var(--color-line-strong);
   background: var(--color-bg-muted);
   padding: 0.6rem 0.75rem;
+  overflow-wrap: anywhere;
 }
 
 .cabinet-apps__head {
@@ -668,6 +669,8 @@
 
 .cabinet-ann-preview {
   margin-bottom: 0.7rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .cabinet-ann-preview-short {
@@ -675,15 +678,17 @@
   border: 2px solid #e2d49a;
   padding: 0.6rem 0.7rem;
   font-size: 0.92rem;
+  overflow-wrap: anywhere;
 }
 
 .cabinet-ann-preview-regular {
   background: #fff;
   border: 2px solid #c8d4e3;
   padding: 0.6rem 0.7rem;
+  overflow-wrap: anywhere;
 }
 
-.cabinet-ann-preview-regular strong {
+.cabinet-ann-preview-regular > strong {
   display: block;
   color: #12315c;
   margin-bottom: 0.3rem;

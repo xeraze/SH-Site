@@ -708,7 +708,8 @@ function ReviewPanel({ kind, user }: { kind: "appeals" | "jobs"; user: PublicUse
                       user={user}
                     />
                   )}
-                  {(app.status === "accepted" || app.status === "rejected") && (
+                  {(app.status === "accepted" || app.status === "rejected") &&
+                    user?.roles.includes("sysadmin") && (
                     <button
                       type="button"
                       className="cabinet-action cabinet-action--no"
@@ -1595,7 +1596,9 @@ function AnnouncementsManage() {
 
           {type === "regular" && (
             <label className="apps-field">
-              <span className="apps-field__label">Короткий опис (для картки)</span>
+              <span className="apps-field__label">
+                Короткий опис (для картки) — {summary.length}/{SUMMARY_MAX}
+              </span>
               <input
                 type="text"
                 value={summary}

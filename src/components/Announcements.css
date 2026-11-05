@@ -2,6 +2,7 @@
   font-size: 0.95rem;
   line-height: 1.5;
   word-break: break-word;
+  overflow-wrap: anywhere;
 }
 .ann-md p {
   margin: 0 0 0.5rem;

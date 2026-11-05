@@ -1,4 +1,7 @@
-import { Route, Routes } from "react-router-dom";
+import { useEffect } from "react";
+import { Route, Routes, useLocation } from "react-router-dom";
+import { fetchMe, getToken } from "./api";
+import { hrefFor } from "./utils/links";
 import { SiteHeader } from "./components/SiteHeader";
 import { Footer } from "./components/Footer";
 import { HomePage } from "./pages/HomePage";
@@ -16,9 +19,25 @@ import { ArchivePage } from "./pages/ArchivePage";
 import { LegalPage } from "./pages/LegalPage";
 import { AppointmentBookingPage } from "./pages/AppointmentBookingPage";
 
+function ProfileGuard() {
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    if (!getToken()) return;
+    void fetchMe().then((me) => {
+      if (!me?.needsProfile) return;
+      if (window.location.pathname.startsWith(hrefFor("/kabinet"))) return;
+      window.location.assign(hrefFor("/kabinet?tab=profile"));
+    });
+  }, [pathname]);
+
+  return null;
+}
+
 function App() {
   return (
     <>
+      <ProfileGuard />
       <SiteHeader />
       <main className="app-main">
         <Routes>
