@@ -32,10 +32,13 @@ export function ApplicationsPage() {
     setSending(true);
 
     const form = e.currentTarget;
-    const answers = active.fields.map((field) => ({
-      label: field.label,
-      value: ((form.elements.namedItem(field.label) as HTMLInputElement) ?? {}).value ?? "",
-    }));
+    const answers = active.fields
+      .map((field) => ({
+        field,
+        value: ((form.elements.namedItem(field.label) as HTMLInputElement) ?? {}).value ?? "",
+      }))
+      .filter(({ field, value }) => field.required !== false || value.trim() !== "")
+      .map(({ field, value }) => ({ label: field.label, value }));
 
     const res = await submitApplication(activeId, answers, renderedAt.current);
     setSending(false);

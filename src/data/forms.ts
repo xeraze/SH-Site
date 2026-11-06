@@ -18,9 +18,20 @@ export const APPLICATION_FORMS: ApplicationForm[] = [
     title: "Заявка на посаду",
     description: "Подайте заявку, щоб отримати посаду в нашій лікарні. Roblox Username береться з профілю.",
     fields: [
-      { label: "Бажана посада", placeholder: "Медична сестра / Санітар / Інше", required: true },
-      { label: "Ваш досвід у RolePlay", placeholder: "Опишіть максимально розгорнуто", multiline: true, required: true },
-      { label: "Чи перебуваєте ви у нашій Roblox-групі?", placeholder: "Так / Ні", required: true },
+      { label: "Ваша спеціалізація за номенклатурою", required: true },
+      {
+        label: "Джерело вашої теоретичної бази (звідки походять ваші медичні знання за цією спеціальністю)",
+        multiline: true,
+        required: true,
+      },
+      {
+        label: "Актуальний рівень базових знань для зарахування на інтернатуру (не обов'язково заповнювати середньому медичному персоналу)",
+        placeholder:
+          "Опишіть теоретичну базу за обраним напрямком, якою ви вже володієте і готові продемонструвати. Основи збору анамнезу, схеми первинного огляду та загальні принципи діагностики",
+        multiline: true,
+        required: false,
+      },
+      { label: "Чи є ви учасником нашої групи Roblox?", placeholder: "Так / Ні", required: true },
     ],
   },
   {
