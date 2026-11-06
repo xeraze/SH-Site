@@ -251,6 +251,21 @@
   width: auto;
 }
 
+.cabinet-ann-item-actions {
+  display: flex;
+  gap: 0.4rem;
+  flex-shrink: 0;
+}
+
+.cabinet-ann-item-actions .cabinet-logout {
+  min-width: 2.2rem;
+  min-height: 2rem;
+  padding: 0.25rem 0.45rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .cabinet-notifs {
   list-style: none;
   margin: 0;

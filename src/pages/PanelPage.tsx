@@ -1874,36 +1874,44 @@ function AnnouncementsManage() {
                   {item.title ? `${item.title} — ` : ""}
                   {(item.summary ?? item.text).slice(0, 80)}
                 </span>
-                <span style={{ display: "flex", gap: "0.4rem" }}>
+                <span className="cabinet-ann-item-actions">
                   <button
                     type="button"
                     className="cabinet-logout"
+                    title={item.active ? "Вимкнути" : "Увімкнути"}
+                    aria-label={item.active ? "Вимкнути" : "Увімкнути"}
                     onClick={() => void onToggle(item)}
                   >
-                    {item.active ? "Вимкнути" : "Увімкнути"}
+                    <Icon icon={item.active ? "mdi:eye-off" : "mdi:eye"} width={16} height={16} />
                   </button>
                   <button
                     type="button"
                     className="cabinet-logout"
+                    title="Редагувати"
+                    aria-label="Редагувати"
                     onClick={() => onEdit(item)}
                   >
-                    Редагувати
+                    <Icon icon="mdi:pencil" width={16} height={16} />
                   </button>
                   {item.type === "regular" && (
                     <button
                       type="button"
                       className="cabinet-logout"
+                      title="Посилання"
+                      aria-label="Посилання"
                       onClick={() => void onCopyLink(item.id)}
                     >
-                      Посилання
+                      <Icon icon="mdi:link-variant" width={16} height={16} />
                     </button>
                   )}
                   <button
                     type="button"
                     className="cabinet-logout"
+                    title="Видалити"
+                    aria-label="Видалити"
                     onClick={() => void onDelete(item.id)}
                   >
-                    Видалити
+                    <Icon icon="mdi:delete" width={16} height={16} />
                   </button>
                 </span>
               </div>
