@@ -5,6 +5,9 @@ import {
   accountRequest,
   deleteApplicationMessage,
   deleteAppointmentMessage,
+  discordLinkStart,
+  discordLoginUrl,
+  discordUnlink,
   emailChangeStart,
   emailChangeVerify,
   fetchAppointments,
@@ -17,7 +20,6 @@ import {
   fetchUnread,
   getToken,
   googleLinkStart,
-  googleRegisterVerify,
   googleUnlink,
   loginPassword,
   loginUrl,
@@ -60,7 +62,6 @@ import "./CabinetPage.css";
 import "../components/Announcements.css";
 
 const ROBLOX_USERNAME_RE = /^[A-Za-z0-9_]{3,20}$/;
-const DISCORD_USERNAME_RE = /^[A-Za-z0-9_.]{2,32}(?:#\d{4})?$/;
 
 function readHashToken(): string | null {
   const hash = window.location.hash.replace(/^#/, "");
@@ -84,13 +85,9 @@ function RoleBadges({ user }: { user: PublicUser }) {
 
 function AuthBox({
   inviteToken,
-  googleChallengeId,
-  onGoogleChallengeUsed,
   onAuthed,
 }: {
   inviteToken: string | null;
-  googleChallengeId?: string | null;
-  onGoogleChallengeUsed?: () => void;
   onAuthed: (token: string, user: PublicUser) => void;
 }) {
   const [mode, setMode] = useState<"login" | "register">("login");
@@ -102,7 +99,6 @@ function AuthBox({
   const [err, setErr] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [googleMode, setGoogleMode] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState("");
   const [turnstileError, setTurnstileError] = useState<string | null>(null);
   const [turnstileSeed, setTurnstileSeed] = useState(0);
@@ -112,14 +108,6 @@ function AuthBox({
     setTurnstileSeed((seed) => seed + 1);
   };
 
-  useEffect(() => {
-    if (googleChallengeId) {
-      setGoogleMode(true);
-      setStep("code");
-      setInfo("Код надіслано на вашу пошту Google. Введіть його, щоб завершити вхід.");
-    }
-  }, [googleChallengeId]);
-
   const switchMode = (m: "login" | "register") => {
     setMode(m);
     setStep("form");
@@ -127,10 +115,8 @@ function AuthBox({
     setErr(null);
     setInfo(null);
     setCode("");
-    setGoogleMode(false);
     setTurnstileError(null);
     resetTurnstile();
-    onGoogleChallengeUsed?.();
   };
 
   const onStart = async (e: React.FormEvent) => {
@@ -187,19 +173,6 @@ function AuthBox({
 
   const onVerify = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (googleMode && googleChallengeId) {
-      setBusy(true);
-      setErr(null);
-      const res = await googleRegisterVerify(googleChallengeId, code.trim());
-      setBusy(false);
-      if (!res.ok) {
-        setErr(res.error);
-        return;
-      }
-      onGoogleChallengeUsed?.();
-      onAuthed(res.token, res.user);
-      return;
-    }
     if (!challengeId) return;
     setBusy(true);
     setErr(null);
@@ -282,7 +255,7 @@ function AuthBox({
                   Після підтвердження пошти акаунт буде створено, а система
                   одноразово переведе вас до заповнення обов&apos;язкового профілю:
                   прізвище, ім&apos;я, по батькові, вік, Roblox Username і за бажанням
-                  Discord Username та інформація про себе.
+                  інформація про себе. Discord прив&apos;язується пізніше в налаштуваннях.
                 </p>
               </>
             )}
@@ -296,11 +269,9 @@ function AuthBox({
         ) : (
           <form onSubmit={onVerify} className="cabinet-auth-form">
             <p className="cabinet-auth-note">
-              {googleMode
-                ? "Ми надіслали 6-значний код на вашу пошту Google — введіть його, щоб створити акаунт і увійти."
-                : mode === "register"
-                  ? "Ми надіслали 6-значний код на вашу пошту."
-                  : "Ми надіслали код для входу на вашу пошту."}
+              {mode === "register"
+                ? "Ми надіслали 6-значний код на вашу пошту."
+                : "Ми надіслали код для входу на вашу пошту."}
             </p>
             <label className="apps-field">
               <span className="apps-field__label">
@@ -324,11 +295,9 @@ function AuthBox({
             <button type="submit" className="portal-cta" disabled={busy || code.length !== 6}>
               {busy
                 ? "Перевірка..."
-                : googleMode
+                : mode === "login"
                   ? "Увійти"
-                  : mode === "login"
-                    ? "Увійти"
-                    : "Завершити реєстрацію"}
+                  : "Завершити реєстрацію"}
             </button>
             <button
               type="button"
@@ -338,8 +307,6 @@ function AuthBox({
                 setCode("");
                 setErr(null);
                 setInfo(null);
-                setGoogleMode(false);
-                onGoogleChallengeUsed?.();
               }}
             >
               Змінити дані
@@ -353,8 +320,14 @@ function AuthBox({
           Увійти через Google
         </a>
         <p className="cabinet-auth-note">
-          Новий акаунт буде створено після підтвердження 6-значним кодом з вашої
-          пошти Google.
+          Через Google акаунт створюється одразу — підтвердження пошти бере на себе Google.
+        </p>
+        <a href={discordLoginUrl(inviteToken ? `?invite=${inviteToken}` : undefined)} className="cabinet-google">
+          <Icon icon="mdi:discord" width={18} height={18} />
+          Увійти через Discord
+        </a>
+        <p className="cabinet-auth-note">
+          Реєстрація через Discord недоступна — спочатку зареєструйтеся, потім прив'яжіть Discord у налаштуваннях.
         </p>
       </div>
     </div>
@@ -372,7 +345,6 @@ export function CabinetPage() {
   const [pwChangeToken, setPwChangeToken] = useState<string | null>(null);
   const [pwChangeMsg, setPwChangeMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [pwChangeBusy, setPwChangeBusy] = useState(false);
-  const [googleChallenge, setGoogleChallenge] = useState<string | null>(null);
   const [initialTab, setInitialTab] = useState<CabinetTab | null>(null);
   const [initialApp, setInitialApp] = useState<string | null>(null);
   const [unread, setUnread] = useState<{ applications: number; appointments: number }>({
@@ -417,6 +389,10 @@ export function CabinetPage() {
       setAuthError(
         "Акаунт Google ще не прив'язано. Зареєструйтесь через email і пароль, а потім прив'яжіть Google у налаштуваннях.",
       );
+    } else if (err === "discord_not_registered") {
+      setAuthError(
+        "Акаунт Discord ще не прив'язано. Зареєструйтесь через email і пароль, а потім прив'яжіть Discord у налаштуваннях.",
+      );
     } else if (err) {
       setAuthError("Авторизація не вдалася. Спробуйте ще раз.");
     }
@@ -431,17 +407,20 @@ export function CabinetPage() {
       setAuthError("Не вдалося прив'язати Google-акаунт. Спробуйте ще раз.");
     }
 
+    const discordLinked = url.searchParams.get("discord_linked");
+    if (discordLinked === "1") {
+      setAuthError(null);
+      setInviteMsg("Discord-акаунт успішно прив'язано.");
+    } else if (url.searchParams.get("discord_link") === "already") {
+      setAuthError("Цей Discord-акаунт уже прив'язано до іншого акаунта.");
+    } else if (url.searchParams.get("discord_link") === "error") {
+      setAuthError("Не вдалося прив'язати Discord-акаунт. Спробуйте ще раз.");
+    }
+
     const inv = url.searchParams.get("invite");
     if (inv) {
       setInviteToken(inv);
       url.searchParams.delete("invite");
-      window.history.replaceState(null, "", url.pathname + url.search);
-    }
-
-    const googleChallengeId = url.searchParams.get("google_challenge");
-    if (googleChallengeId) {
-      setGoogleChallenge(googleChallengeId);
-      url.searchParams.delete("google_challenge");
       window.history.replaceState(null, "", url.pathname + url.search);
     }
 
@@ -593,8 +572,6 @@ export function CabinetPage() {
       ) : !user ? (
         <AuthBox
           inviteToken={inviteToken}
-          googleChallengeId={googleChallenge}
-          onGoogleChallengeUsed={() => setGoogleChallenge(null)}
           onAuthed={handleAuthed}
         />
       ) : user.needsProfile ? (
@@ -887,7 +864,7 @@ function AppItem({ app, user }: { app: ApplicationItem; user: PublicUser }) {
   const isStaffUser = user.roles.some((role) => role !== "patient");
 
   const canManageMessage = (message: DialogueMessage) => {
-    if (message.senderId === user.id) return true;
+    if (message.senderId === user.id) return isStaffUser;
     if (isStaffUser && user.roles.includes("sysadmin") && message.isReviewer) return true;
     return false;
   };
@@ -1194,7 +1171,7 @@ function AppointmentChat({ appointment, user }: { appointment: AppointmentItem; 
   const isStaffUser = user.roles.some((role) => role !== "patient");
 
   const canManageMessage = (message: DialogueMessage) => {
-    if (message.senderId === user.id) return true;
+    if (message.senderId === user.id) return isStaffUser;
     if (isStaffUser && user.roles.includes("sysadmin") && message.isReviewer) return true;
     return false;
   };
@@ -1479,7 +1456,6 @@ function ProfileTab({
   const [gender, setGender] = useState(user.gender ?? "");
   const [age, setAge] = useState(user.age ? String(user.age) : "");
   const [bio, setBio] = useState(user.bio ?? "");
-  const [discordUsername, setDiscordUsername] = useState(user.discordUsername ?? "");
   const [robloxUsername, setRobloxUsername] = useState(user.robloxUsername ?? "");
   const [avatar, setAvatar] = useState<string | null>(user.avatar);
   const [saving, setSaving] = useState(false);
@@ -1505,11 +1481,6 @@ function ProfileTab({
       setError("Roblox Username: 3–20 символів, латиниця, цифри та «_»");
       return;
     }
-    const discord = discordUsername.trim();
-    if (discord && !DISCORD_USERNAME_RE.test(discord)) {
-      setError("Некоректний Discord Username");
-      return;
-    }
     setSaving(true);
     setError(null);
     setOkMsg(null);
@@ -1521,7 +1492,6 @@ function ProfileTab({
       age: Number(age),
       avatar,
       bio,
-      discordUsername: discord,
       robloxUsername: roblox,
     });
     setSaving(false);
@@ -1631,16 +1601,7 @@ function ProfileTab({
               required
             />
           </label>
-          <label className="apps-field">
-            <span className="apps-field__label">Discord Username</span>
-            <input
-              type="text"
-              value={discordUsername}
-              onChange={(e) => setDiscordUsername(e.target.value)}
-              placeholder="Ваш Discord Username (необов'язково)"
-              maxLength={40}
-            />
-          </label>
+          <DiscordLinkRow user={user} />
           {error && <p className="cabinet-profile-error">{error}</p>}
           {okMsg && <p className="cabinet-auth-msg cabinet-auth-msg--ok">{okMsg}</p>}
           <button type="submit" className="portal-cta" disabled={saving}>
@@ -1665,6 +1626,7 @@ function SettingsTab({
       <PasswordBlock user={user} onUserUpdated={onUserUpdated} />
       <EmailChangeBlock user={user} onUserUpdated={onUserUpdated} />
       <GoogleBlock user={user} />
+      <DiscordBlock user={user} />
       <SessionsBlock />
       <AccountBlock />
     </>
@@ -1718,11 +1680,12 @@ function EmailNotifBlock({
     <div className="p-block">
       <div className="p-block__head">Сповіщення на пошту</div>
       <div className="p-block__body cabinet-settings">
-        {row("emailNotifications", "Отримувати сповіщення на пошту про статус заявок")}
+        {row("emailNotifications", "Про статус звернень, заявок та записів на прийом")}
+        {row("notifyPatientDialogue", "Про нове повідомлення у діалозі від персоналу")}
         {isReviewer && (
           <>
             <p className="cabinet-settings__group">Звернення</p>
-            {row("notifyNewApplication", "Нове звернення (пацієнт надіслав заявку)")}
+            {row("notifyNewApplication", "Нове звернення")}
             {row(
               "notifyApplicationDialogue",
               "Нове повідомлення пацієнта у діалозі звернення",
@@ -2049,6 +2012,81 @@ function GoogleBlock({ user }: { user: PublicUser }) {
   );
 }
 
+function DiscordLinkRow({ user, showNote }: { user: PublicUser; showNote?: boolean }) {
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const onLink = async () => {
+    setBusy(true);
+    setMsg(null);
+    const res = await discordLinkStart();
+    setBusy(false);
+    if (!res.ok) {
+      setMsg({ ok: false, text: res.error });
+      return;
+    }
+    window.location.href = res.url;
+  };
+
+  const onUnlink = async () => {
+    setBusy(true);
+    setMsg(null);
+    const res = await discordUnlink();
+    setBusy(false);
+    if (!res.ok) {
+      setMsg({ ok: false, text: res.error });
+      return;
+    }
+    setMsg({ ok: true, text: "Discord-акаунт відв'язано." });
+    window.location.reload();
+  };
+
+  return (
+    <>
+      <div className="cabinet-security__row">
+        <span>
+          <strong>Статус:</strong>{" "}
+          {user.discordLinked
+            ? user.discordUsername
+              ? `прив'язано (${user.discordUsername})`
+              : "прив'язано"
+            : "не прив'язано"}
+        </span>
+        {user.discordLinked ? (
+          <button type="button" className="cabinet-logout" onClick={() => void onUnlink()} disabled={busy}>
+            {busy ? "..." : "Відв'язати"}
+          </button>
+        ) : (
+          <button type="button" className="cabinet-logout" onClick={() => void onLink()} disabled={busy}>
+            {busy ? "..." : "Прив'язати"}
+          </button>
+        )}
+      </div>
+      {showNote && (
+        <p className="cabinet-auth-note">
+          Реєстрація через Discord недоступна — лише вхід і прив'язка наявного акаунта.
+        </p>
+      )}
+      {msg && (
+        <p className={`cabinet-auth-msg ${msg.ok ? "cabinet-auth-msg--ok" : "cabinet-auth-msg--err"}`}>
+          {msg.text}
+        </p>
+      )}
+    </>
+  );
+}
+
+function DiscordBlock({ user }: { user: PublicUser }) {
+  return (
+    <div className="p-block">
+      <div className="p-block__head">Discord-акаунт</div>
+      <div className="p-block__body cabinet-security">
+        <DiscordLinkRow user={user} showNote />
+      </div>
+    </div>
+  );
+}
+
 function SessionsBlock() {
   const [sessions, setSessions] = useState<SessionItem[]>([]);
   const [loaded, setLoaded] = useState(false);
@@ -2226,7 +2264,6 @@ function ProfileForm({
   const [patronymic, setPatronymic] = useState(user.patronymic ?? "");
   const [gender, setGender] = useState(user.gender ?? "");
   const [age, setAge] = useState(user.age ? String(user.age) : "");
-  const [discordUsername, setDiscordUsername] = useState(user.discordUsername ?? "");
   const [robloxUsername, setRobloxUsername] = useState(user.robloxUsername ?? "");
   const [avatar, setAvatar] = useState<string | null>(user.avatar);
   const [saving, setSaving] = useState(false);
@@ -2251,11 +2288,6 @@ function ProfileForm({
       setError("Roblox Username: 3–20 символів, латиниця, цифри та «_»");
       return;
     }
-    const discord = discordUsername.trim();
-    if (discord && !DISCORD_USERNAME_RE.test(discord)) {
-      setError("Некоректний Discord Username");
-      return;
-    }
     setSaving(true);
     setError(null);
     const res = await saveProfile({
@@ -2265,7 +2297,6 @@ function ProfileForm({
       gender,
       age: Number(age),
       avatar,
-      discordUsername: discord,
       robloxUsername: roblox,
     });
     setSaving(false);
@@ -2365,16 +2396,7 @@ function ProfileForm({
               required
             />
           </label>
-          <label className="apps-field">
-            <span className="apps-field__label">Discord Username</span>
-            <input
-              type="text"
-              value={discordUsername}
-              onChange={(e) => setDiscordUsername(e.target.value)}
-              placeholder="Ваш Discord Username (необов'язково)"
-              maxLength={40}
-            />
-          </label>
+          <DiscordLinkRow user={user} />
           <div className="cabinet-avatar-field">
             <span className="apps-field__label">Фото профілю</span>
             <div className="cabinet-avatar-row">

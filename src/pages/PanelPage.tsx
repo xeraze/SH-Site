@@ -93,6 +93,7 @@ const AUDIT_ACTION_LABELS: Record<string, string> = {
   "user.ban": "Блокування акаунта",
   "user.unban": "Розблокування акаунта",
   "user.delete": "Видалення акаунта",
+  "user.edit_name": "Зміна ПІБ",
   "role.assign": "Надано посаду",
   "invite.create": "Надіслано запрошення",
   "application.status": "Рішення за зверненням",
@@ -396,7 +397,7 @@ function ReviewChat({
                       )}
                     </>
                   )}
-                  {!decided && !closed && (m.senderId === user?.id || user?.roles.includes("sysadmin")) && (
+                  {!decided && !closed && (m.senderId === user?.id || (user?.roles.includes("sysadmin") && m.isReviewer)) && (
                     <div className="cabinet-chat__actions">
                       {m.senderId === user?.id && (
                         <button
@@ -2037,6 +2038,36 @@ type UsersSortKey =
   | "seen"
   | "status";
 
+function formatIp(ip: string | null | undefined): string {
+  if (!ip) return "";
+  if (!ip.includes(":")) return ip;
+  const groups = ip.split(":").map((g) => g.replace(/^0+/, "") || "0");
+  let bestStart = -1;
+  let bestLen = 0;
+  let curStart = -1;
+  let curLen = 0;
+  groups.forEach((g, i) => {
+    if (g === "0") {
+      if (curStart === -1) {
+        curStart = i;
+        curLen = 0;
+      }
+      curLen += 1;
+      if (curLen > bestLen) {
+        bestLen = curLen;
+        bestStart = curStart;
+      }
+    } else {
+      curStart = -1;
+      curLen = 0;
+    }
+  });
+  if (bestLen < 2) return groups.join(":");
+  const head = groups.slice(0, bestStart).join(":");
+  const tail = groups.slice(bestStart + bestLen).join(":");
+  return `${head}::${tail}`;
+}
+
 function userStatusKey(u: AdminUserItem): "banned" | "temp" | "active" {
   if (u.banned) return "banned";
   if (
@@ -2326,7 +2357,7 @@ function PanelAppointmentChat({
                     )}
                   </>
                 )}
-                {!terminal && !dialogueClosed && (m.senderId === user?.id || user?.roles.includes("sysadmin")) && (
+                {!terminal && !dialogueClosed && (m.senderId === user?.id || (user?.roles.includes("sysadmin") && m.isReviewer)) && (
                   <div className="cabinet-chat__actions">
                     {m.senderId === user?.id && (
                       <button
@@ -2464,7 +2495,7 @@ function UsersBanPanel() {
 
   const allAuditActions = [...new Set([
     "application.create", "warn", "warn.block", "warning.remove", "timeout", "unblock",
-    "user.ban", "user.unban", "user.delete",
+    "user.ban", "user.unban", "user.delete", "user.edit_name",
     "role.assign", "invite.create",
     "application.status", "application.dialogue_close", "application.message",
     "job.create", "job.status", "job.dialogue_close", "job.message",
@@ -2590,6 +2621,25 @@ function UsersBanPanel() {
     await run(u.id, () => adminSetBan(u.id, banned, reason, { banIp, banUa }));
   };
 
+  const onEditName = async (u: AdminUserItem) => {
+    const last = window.prompt("Прізвище:", u.lastName ?? "");
+    if (last === null) return;
+    const first = window.prompt("Ім'я:", u.firstName ?? "");
+    if (first === null) return;
+    const patr = window.prompt("По батькові:", u.patronymic ?? "");
+    if (patr === null) return;
+    const payload = {
+      lastName: last.trim(),
+      firstName: first.trim(),
+      patronymic: patr.trim(),
+    };
+    if (!payload.lastName || !payload.firstName || !payload.patronymic) {
+      setErr("ПІБ не може бути порожнім");
+      return;
+    }
+    await run(u.id, () => adminUserAction(u.id, "edit_name", payload));
+  };
+
   const onWarn = async (u: AdminUserItem) => {
     const r = window.prompt("Причина попередження:", "");
     if (r === null) return;
@@ -2639,7 +2689,8 @@ function UsersBanPanel() {
         needle &&
         !u.name.toLowerCase().includes(needle) &&
         !(u.email ?? "").toLowerCase().includes(needle) &&
-        !(u.lastIp ?? "").toLowerCase().includes(needle)
+        !(u.lastIp ?? "").toLowerCase().includes(needle) &&
+        !formatIp(u.lastIp).toLowerCase().includes(needle)
       ) {
         return false;
       }
@@ -2660,7 +2711,7 @@ function UsersBanPanel() {
         case "roles":
           return dir * a.roles.join(", ").localeCompare(b.roles.join(", "), "uk");
         case "ip":
-          return dir * (a.lastIp ?? "").localeCompare(b.lastIp ?? "", "uk");
+          return dir * formatIp(a.lastIp).localeCompare(formatIp(b.lastIp), "uk");
         case "device":
           return dir * formatUa(a.lastUa).localeCompare(formatUa(b.lastUa), "uk");
         case "seen":
@@ -2992,7 +3043,7 @@ function UsersBanPanel() {
                       </td>
                     <td>{u.email ?? "—"}</td>
                     <td>{u.roles.join(", ") || "—"}</td>
-                    <td className="panel-users__ip">{u.lastIp ?? "—"}</td>
+                    <td className="panel-users__ip">{u.lastIp ? formatIp(u.lastIp) : "—"}</td>
                     <td title={u.lastUa ?? ""}>{formatUa(u.lastUa)}</td>
                     <td>{fmtDate(u.createdAt)}</td>
                     <td>{fmtDate(u.lastSeen)}</td>
@@ -3019,6 +3070,15 @@ function UsersBanPanel() {
                     </td>
                     <td>
                       <div className="panel-users__actions">
+                        <button
+                          type="button"
+                          className="cabinet-logout"
+                          disabled={busyId === u.id}
+                          title="Змінити ПІБ"
+                          onClick={() => void onEditName(u)}
+                        >
+                          <Icon icon="mdi:pencil" width={15} height={15} />
+                        </button>
                         <button
                           type="button"
                           className="cabinet-logout"

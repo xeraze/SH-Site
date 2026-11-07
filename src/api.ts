@@ -21,6 +21,7 @@ export interface PublicUser {
   emailNotifications: boolean;
   hasPassword: boolean;
   googleLinked: boolean;
+  discordLinked: boolean;
   bio: string | null;
   discordUsername: string | null;
   robloxUsername: string | null;
@@ -191,6 +192,11 @@ export function setToken(token: string | null): void {
 export function loginUrl(extra?: string): string {
   const redirect = extra ? `/kabinet${extra}` : "/kabinet";
   return `${API_BASE}/auth/google?redirect=${encodeURIComponent(redirect)}`;
+}
+
+export function discordLoginUrl(extra?: string): string {
+  const redirect = extra ? `/kabinet${extra}` : "/kabinet";
+  return `${API_BASE}/auth/discord?redirect=${encodeURIComponent(redirect)}`;
 }
 
 async function apiFetch<T>(
@@ -389,6 +395,26 @@ export async function googleUnlink(): Promise<
   return { ok: true };
 }
 
+export async function discordLinkStart(): Promise<
+  { ok: true; url: string } | { ok: false; error: string }
+> {
+  const res = await apiFetch<{ url: string }>("/api/auth/discord/link", {
+    method: "POST",
+  });
+  if (!res.ok) return { ok: false, error: res.error };
+  return { ok: true, url: res.data.url };
+}
+
+export async function discordUnlink(): Promise<
+  { ok: true } | { ok: false; error: string }
+> {
+  const res = await apiFetch<{ ok: boolean }>("/api/auth/discord/unlink", {
+    method: "POST",
+  });
+  if (!res.ok) return { ok: false, error: res.error };
+  return { ok: true };
+}
+
 export async function accountRequest(
   kind: "export" | "delete",
 ): Promise<{ ok: true } | { ok: false; error: string }> {
@@ -404,6 +430,9 @@ export interface AdminUserItem {
   id: string;
   email: string | null;
   name: string;
+  lastName?: string | null;
+  firstName?: string | null;
+  patronymic?: string | null;
   roles: string[];
   avatar?: string | null;
   age?: number | null;
@@ -445,8 +474,15 @@ export async function adminSetBan(
 
 export async function adminUserAction(
   id: string,
-  action: "warn" | "timeout" | "unblock" | "delete" | "remove_warning",
-  payload?: { reason?: string; hours?: number; warningId?: string },
+  action: "warn" | "timeout" | "unblock" | "delete" | "remove_warning" | "edit_name",
+  payload?: {
+    reason?: string;
+    hours?: number;
+    warningId?: string;
+    lastName?: string;
+    firstName?: string;
+    patronymic?: string;
+  },
 ): Promise<
   { ok: true; warnings?: number; blockedUntil?: string | null } | { ok: false; error: string }
 > {
@@ -662,20 +698,6 @@ export async function deleteAppointmentMessage(
   return { ok: true };
 }
 
-export async function googleRegisterVerify(
-  challengeId: string,
-  code: string,
-): Promise<
-  { ok: true; token: string; user: PublicUser } | { ok: false; error: string }
-> {
-  const res = await apiFetch<{ token: string; user: PublicUser }>(
-    "/api/auth/google/register/verify",
-    { method: "POST", body: { challengeId, code } },
-  );
-  if (!res.ok) return { ok: false, error: res.error };
-  return { ok: true, token: res.data.token, user: res.data.user };
-}
-
 export function announcementLink(id: string): string {
   return `${window.location.origin}${import.meta.env.BASE_URL}oholoshennya/${id}`;
 }
@@ -709,6 +731,7 @@ export interface SettingsData {
   notifyJobDialogue: boolean;
   notifyNewAppointment: boolean;
   notifyAppointmentDialogue: boolean;
+  notifyPatientDialogue: boolean;
 }
 
 export type SettingsField = keyof SettingsData;
@@ -724,6 +747,7 @@ export async function fetchSettings(): Promise<SettingsData> {
       notifyJobDialogue: true,
       notifyNewAppointment: true,
       notifyAppointmentDialogue: true,
+      notifyPatientDialogue: true,
     };
   }
   return res.data;

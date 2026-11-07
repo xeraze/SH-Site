@@ -131,6 +131,17 @@ export function ApplicationsPage() {
                         required={field.required}
                         maxLength={2000}
                       />
+                    ) : field.options ? (
+                      <select name={field.label} required={field.required} defaultValue="">
+                        <option value="" disabled>
+                          Оберіть варіант
+                        </option>
+                        {field.options.map((option) => (
+                          <option key={option} value={option}>
+                            {option}
+                          </option>
+                        ))}
+                      </select>
                     ) : (
                       <input
                         type="text"

@@ -3,6 +3,7 @@ export interface FormField {
   placeholder?: string;
   required?: boolean;
   multiline?: boolean;
+  options?: string[];
 }
 
 export interface ApplicationForm {
@@ -30,7 +31,7 @@ export const APPLICATION_FORMS: ApplicationForm[] = [
         multiline: true,
         required: false,
       },
-      { label: "Чи є ви учасником нашої групи Roblox?", placeholder: "Так / Ні", required: true },
+      { label: "Чи є ви учасником нашої групи Roblox?", options: ["Так", "Ні"], required: true },
     ],
   },
   {
@@ -50,7 +51,7 @@ export const APPLICATION_FORMS: ApplicationForm[] = [
     fields: [
       { label: "Roblox або Discord порушника", placeholder: "@username / ID", required: true },
       { label: "Яке правило було порушено та коли?", placeholder: "Суть ситуації", multiline: true, required: true },
-      { label: "Наявність доказів", placeholder: "Так / Ні", required: true },
+      { label: "Наявність доказів", options: ["Так", "Ні"], required: true },
     ],
   },
   {
@@ -60,7 +61,7 @@ export const APPLICATION_FORMS: ApplicationForm[] = [
     fields: [
       { label: "Місце виявлення багу", placeholder: "Discord-сервер чи Roblox-плейс", required: true },
       { label: "Детальний опис проблеми", placeholder: "Як відтворився баг?", multiline: true, required: true },
-      { label: "Наявність фото/відео фіксації", placeholder: "Так / Ні", required: true },
+      { label: "Наявність фото/відео фіксації", options: ["Так", "Ні"], required: true },
     ],
   },
   {

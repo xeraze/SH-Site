@@ -54,7 +54,8 @@
 }
 
 .apps-field input,
-.apps-field textarea {
+.apps-field textarea,
+.apps-field select {
   border: 2px inset var(--color-line-strong);
   background: var(--color-bg-muted);
   padding: 5px 7px;
@@ -66,7 +67,8 @@
 }
 
 .apps-field input:focus,
-.apps-field textarea:focus {
+.apps-field textarea:focus,
+.apps-field select:focus {
   outline: 2px dotted var(--color-rose);
   outline-offset: 1px;
   border-color: var(--color-navy);
