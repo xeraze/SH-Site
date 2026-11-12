@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="uk">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/png" href="./img/emblem.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Комунальне некомерційне підприємство &quot;Слобідська центральна районна лікарня&quot; Слобідської міської ради — офіційний веб-портал для пацієнтів." />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Слобідська ЦРЛ" />
+    <meta property="og:title" content="Слобідська ЦРЛ - Офіційний веб-портал" />
+    <meta property="og:description" content="Комунальне некомерційне підприємство &quot;Слобідська центральна районна лікарня&quot; Слобідської міської ради — офіційний веб-портал для пацієнтів." />
+    <meta property="og:url" content="https://xeraze.github.io/SH-Site/" />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="Слобідська ЦРЛ - Офіційний веб-портал" />
+    <meta name="twitter:description" content="Офіційний веб-портал Слобідської центральної районної лікарні." />
+    <title>Слобідська ЦРЛ - Офіційний веб-портал</title>
+    <script>
+      (function () {
+        var search = window.location.search;
+        if (search[1] === "p" && search[2] === "=") {
+          var decoded = search.slice(3).split("&q=");
+          window.history.replaceState(
+            null,
+            "",
+            window.location.pathname.slice(0, -1) +
+              decoded[0].replace(/~and~/g, "&") +
+              (decoded[1] ? "?" + decoded[1].replace(/~and~/g, "&") : "") +
+              window.location.hash,
+          );
+        }
+      })();
+    </script>
+    <script type="module" crossorigin src="/SH-Site/assets/index-BDCX_5zc.js"></script>
+    <link rel="stylesheet" crossorigin href="/SH-Site/assets/index-C_OspqFf.css">
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>
