@@ -1,0 +1,97 @@
+@import "./tokens.css";
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: auto;
+}
+
+body {
+  margin: 0;
+  background-color: var(--color-teal-tint);
+  background-image: repeating-linear-gradient(
+    45deg,
+    rgba(46, 139, 139, 0.07) 0 12px,
+    transparent 12px 24px
+  );
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+#root {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.app-main {
+  flex: 1 0 auto;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-display);
+  margin: 0;
+  color: var(--color-navy-deep);
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+p {
+  margin: 0;
+}
+
+:where(a) {
+  color: var(--color-navy);
+  text-decoration: underline;
+}
+
+:where(a:visited) {
+  color: var(--color-rose);
+}
+
+:where(a:hover) {
+  color: var(--color-teal);
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+ul,
+ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+img,
+svg {
+  display: block;
+  max-width: 100%;
+}
+
+:focus-visible {
+  outline: 2px dotted var(--color-rose);
+  outline-offset: 2px;
+  border-radius: 0;
+}
+
+.container {
+  max-width: var(--container-max);
+  margin: 0 auto;
+  padding: 0 12px;
+}
+
+.section {
+  padding-block: var(--space-section);
+}
