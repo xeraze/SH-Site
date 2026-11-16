@@ -1,0 +1,35 @@
+:root {
+  --color-bg: #F7FAFB;
+  --color-bg-raised: #FFFFFF;
+  --color-bg-muted: #EEF4F5;
+  --color-ink: #17242E;
+  --color-ink-soft: #4A5A63;
+  --color-navy: #0E3A53;
+  --color-navy-deep: #0A2A3D;
+  --color-teal: #2E8B8B;
+  --color-teal-soft: #4FA9A0;
+  --color-teal-tint: #E4F3F1;
+  --color-amber: #C97A3D;
+  --color-rose: #8B2E4E;
+  --color-line: #D7E3E5;
+  --color-line-strong: #B7C9CC;
+
+  --color-status-vacant: #2E8B6B;
+  --color-status-occupied: #8B3E3E;
+  --color-status-limited: #C98B3D;
+
+  --font-display: Georgia, "Times New Roman", Times, serif;
+  --font-body: "Times New Roman", Times, serif;
+  --font-mono: "Courier New", Courier, monospace;
+
+  --radius-sm: 0px;
+  --radius-md: 0px;
+  --radius-lg: 0px;
+  --container-max: 1000px;
+  --space-section: 2.5rem;
+
+  --shadow-card: 2px 2px 0 rgba(14, 58, 83, 0.25);
+  --shadow-card-hover: 3px 3px 0 rgba(14, 58, 83, 0.35);
+
+  --ease-standard: steps(6, end);
+}

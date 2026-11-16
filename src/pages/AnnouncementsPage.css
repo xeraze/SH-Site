@@ -1,0 +1,38 @@
+.ann-feed-foot {
+  margin-top: 1.4rem;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.ann-code-form {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.ann-code-form input {
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  font-size: 1.1rem;
+  font-family: var(--font-mono, monospace);
+  padding: 0.45rem 0.7rem;
+  border: 2px inset #c8d4e3;
+  width: 160px;
+  background: #fff;
+}
+
+.ann-code-created .p-block__body {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+}
+
+.ann-code-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: 0.25em;
+  background: #fdf7e2;
+  border: 2px dashed #d9c777;
+  padding: 0.3rem 0.8rem;
+}
