@@ -1,24 +1,19 @@
 import { PortalLayout } from "../components/PortalLayout";
-import "./ContactsPage.css";
+import "./Links.css";
 
 const LINKS = [
   {
-    title: "Центр підтримки",
-    text: "Заявки на посаду, скарги та пропозиції щодо роботи лікарні.",
-    href: "https://discord.com/channels/1465334351452569800/1466418410035482706",
+    title: "Discord Server",
+    text: "Офіційний сервер медичного RP-проєкту «Слобідська ЦРЛ»",
+    href: "https://discord.gg/eUBGT6yZAc",
   },
   {
-    title: "Графік ігрових сесій",
-    text: "Актуальний розклад запланованих сесій та подій проєкту.",
-    href: "https://discord.com/channels/1465334351452569800/1465695682227601704",
+    title: "Правила проєкту",
+    text: "Правила проєкту «Слобідська ЦРЛ», які поширюються на спільноту Discord, гру та веб-портал",
+    href: "https://docs.google.com/document/d/1hSPg5WpzAMpn48qgByT_SuPdIxpce66LkCSldv5Ne-w/edit?usp=sharing",
   },
   {
-    title: "Список ролей у RP",
-    text: "Повний перелік ролей на Discord-сервері спільноти.",
-    href: "https://discord.com/channels/1465334351452569800/1466418240577339586",
-  },
-  {
-    title: "Гра в Roblox",
+    title: "Roblox-гра «Слобідська ЦРЛ»",
     text: "Приєднатися до ігрового світу \"Слобідська ЦРЛ\".",
     href: "https://www.roblox.com/share?code=9687247321d6614a842c75669b6f7218&type=ExperienceDetails",
   },
@@ -31,9 +26,9 @@ const LINKS = [
 
 export function ContactsPage() {
   return (
-    <PortalLayout title="Контакти та звернення">
+    <PortalLayout title="Інше">
       <div className="p-block">
-        <div className="p-block__head">Як звернутися по допомогу</div>
+        <div className="p-block__head">Як отримати допомогу?</div>
         <div className="p-block__body">
           <p>
             Якщо ви граєте за пацієнта, достатньо приєднатися до сервера гри
@@ -42,8 +37,10 @@ export function ContactsPage() {
             та надають допомогу відповідно до ситуації вашого персонажа.
           </p>
           <p>
-            Для заявок на посаду, скарг або пропозицій використовуйте розділ
-            "Заявки" на сайті або центр підтримки на Discord-сервері.
+            Для заявок на посаду, звернень (скарг чи пропозицій) та записів на
+            прийом використовуйте розділ «Анкети» на сайті. Після заповнення анкети оператор/перевіряльник зв'яжеться з вами для
+            уточнення деталей та підтвердження вашого звернення/заявки або запису. Якщо ви бажаєте стати
+            медичним працівником подайте заявку на посаду через розділ «Анкети».
           </p>
         </div>
       </div>

@@ -6,9 +6,9 @@ export function AboutPage() {
   return (
     <PortalLayout title="Про лікарню">
       <p className="p-lead">
-        КНП "Слобідська ЦРЛ" СМР — медичний заклад, що об'єднує
+        КНП "Слобідська ЦРЛ" СМР — це медичний заклад, який об'єднує
         поліклінічну, стаціонарну та консультативно-діагностичну допомогу
-        в межах рольового проєкту.
+        в межах РП-проєкту "Слобідська ЦРЛ".
       </p>
 
       <div className="p-block">
@@ -65,10 +65,9 @@ export function AboutPage() {
         <div className="p-block__head p-block__head--teal">Лікарі та персонал</div>
         <div className="p-block__body">
           <p style={{ marginBottom: "0.8rem", fontSize: "0.9rem", color: "var(--color-ink-soft)" }}>
-            Повний перелік лікарів та іншого персоналу лікарні — у розділі
-            "Відділення".
+            Повний перелік лікарів та іншого персоналу лікарні у розділі "Відділення".
           </p>
-          <Link to="/viddilennya" className="portal-cta" style={{ width: "fit-content", paddingInline: "1.2rem" }}>
+          <Link to="/departments" className="portal-cta" style={{ width: "fit-content", paddingInline: "1.2rem" }}>
             Перейти до структури
           </Link>
         </div>

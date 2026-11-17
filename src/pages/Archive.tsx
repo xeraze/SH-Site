@@ -13,7 +13,7 @@ import {
 } from "../api";
 import { AnnouncementCard } from "../components/Announcements";
 import { PortalLayout } from "../components/PortalLayout";
-import { STAFF_ROLES_UI } from "../data/roles";
+import { STAFF_ROLES_UI } from "../data/status";
 import "./AnnouncementsPage.css";
 
 export function ArchivePage() {

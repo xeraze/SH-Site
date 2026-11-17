@@ -21,20 +21,20 @@ import {
   REVIEWER_ROLES_UI,
   ROLE_LABELS_UI,
   hasAnyRole,
-} from "../data/roles";
-import { personalizationLabels } from "../data/personalization";
+} from "../data/status";
+import { personalizationLabels } from "../data/departments";
 import { departments } from "../data/hierarchy";
-import "./SiteHeader.css";
+import "./Head.css";
 
 const NAV_LINKS = [
   { to: "/", label: "Головна" },
-  { to: "/pro-likarniu", label: "Про лікарню" },
-  { to: "/viddilennya", label: "Відділення" },
-  { to: "/dokumentaciya", label: "Документація" },
-  { to: "/dlya-pacientiv", label: "Для пацієнтів" },
-  { to: "/zayavky", label: "Заявки" },
-  { to: "/vidguky", label: "Відгуки" },
-  { to: "/kontakty", label: "Контакти" },
+  { to: "/about-hospital", label: "Про лікарню" },
+  { to: "/departments", label: "Відділення" },
+  { to: "/documentation", label: "Документація" },
+  { to: "/for-patients", label: "Для пацієнтів" },
+  { to: "/forms", label: "Анкети" },
+  { to: "/reviews", label: "Відгуки" },
+  { to: "/links", label: "Інше" },
 ];
 
 interface SearchEntry {
@@ -46,18 +46,18 @@ interface SearchEntry {
 
 const PAGE_INDEX: SearchEntry[] = [
   { title: "Головна", to: "/", kind: "page", keywords: "головна старт головна сторінка" },
-  { title: "Про лікарню", to: "/pro-likarniu", kind: "page", keywords: "про лікарню історія про заклад" },
-  { title: "Відділення", to: "/viddilennya", kind: "page", keywords: "відділення структура структура лікарні підрозділи" },
-  { title: "Документація", to: "/dokumentaciya", kind: "page", keywords: "документація документи нормативні положення інструкції правила" },
-  { title: "Для пацієнтів", to: "/dlya-pacientiv", kind: "page", keywords: "для пацієнтів інформація пацієнтам правила" },
-  { title: "Заявки", to: "/zayavky", kind: "page", keywords: "заявки звернення подати заявку вакансії працевлаштування скарга" },
-  { title: "Відгуки", to: "/vidguky", kind: "page", keywords: "відгуки відгук оцінка лікар відгук про лікаря" },
-  { title: "Контакти", to: "/kontakty", kind: "page", keywords: "контакти адреса телефон графік роботи як дістатися" },
+  { title: "Про лікарню", to: "/about-hospital", kind: "page", keywords: "про лікарню історія про заклад" },
+  { title: "Відділення", to: "/departments", kind: "page", keywords: "відділення структура структура лікарні підрозділи" },
+  { title: "Документація", to: "/documentation", kind: "page", keywords: "документація документи нормативні положення інструкції правила" },
+  { title: "Для пацієнтів", to: "/for-patients", kind: "page", keywords: "для пацієнтів інформація пацієнтам правила" },
+  { title: "Анкети", to: "/forms", kind: "page", keywords: "анкети звернення подати анкету вакансії працевлаштування скарга" },
+  { title: "Відгуки", to: "/reviews", kind: "page", keywords: "відгуки відгук оцінка лікар відгук про лікаря" },
+  { title: "Інше", to: "/links", kind: "page", keywords: "інше контакти адреса телефон графік роботи як дістатися" },
   { title: "Особистий кабінет", to: "/kabinet", kind: "page", keywords: "кабінет особистий вхід реєстрація профіль" },
   { title: "Оголошення", to: "/oholoshennya", kind: "page", keywords: "оголошення новини події" },
-  { title: "Запис на прийом", to: "/zapys-na-pryiom", kind: "page", keywords: "запис прийом записатися лікар консультація" },
+  { title: "Запис на прийом", to: "/forms?type=appointment", kind: "page", keywords: "запис прийом записатися лікар консультація" },
   { title: "Архів оголошень", to: "/arhiv", kind: "page", keywords: "архів старі оголошення" },
-  { title: "Порядок назви допомоги", to: "/kontakty", kind: "page", keywords: "порядок назви допомоги смерті свідоцтво" },
+  { title: "Порядок назви допомоги", to: "/links", kind: "page", keywords: "порядок назви допомоги смерті свідоцтво" },
 ];
 
 function buildStaticIndex(): SearchEntry[] {
@@ -65,7 +65,7 @@ function buildStaticIndex(): SearchEntry[] {
   for (const d of departments) {
     entries.push({
       title: d.name,
-      to: `/viddilennya/${d.id}`,
+      to: `/departments/${d.id}`,
       kind: "dept",
       keywords: `${d.name} ${d.description}`,
     });
@@ -283,7 +283,7 @@ export function SiteHeader() {
       const home = departments.find((d) => s.personalization.includes(d.id));
       const entry: SearchEntry = {
         title: s.name,
-        to: home ? `/viddilennya/${home.id}` : `/viddilennya`,
+        to: home ? `/departments/${home.id}` : `/departments`,
         kind: "staff",
         keywords: `${s.name} ${positions} ${s.specialization ?? ""} ${depts}`,
       };
@@ -329,7 +329,7 @@ export function SiteHeader() {
           <form className="site-header__search" onSubmit={submit} role="search">
             <input
               type="search"
-              placeholder="Пошук по сайту..."
+              placeholder="Пошук..."
               value={query}
               onChange={(e) => {
                 setQuery(e.target.value);

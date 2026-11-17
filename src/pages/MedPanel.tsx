@@ -69,8 +69,8 @@ import {
 } from "../api";
 import { PortalLayout } from "../components/PortalLayout";
 import { Lightbox, VideoPreview } from "../components/Announcements";
-import { ProfileModal, type ProfileUser } from "../components/ProfileModal";
-import { AssignPositionsModal } from "../components/AssignPositionsModal";
+import { ProfileModal, type ProfileUser } from "../components/Profile";
+import { SetPositionsModal } from "../components/SetPositions";
 import { ChatDocCard, ChatImage } from "../components/ChatFiles";
 import {
   compressImageForChat,
@@ -90,13 +90,13 @@ import {
   hasAnyRole,
   toStaffStatus,
   type StaffStatus,
-} from "../data/roles";
+} from "../data/status";
 import { POSITION_GROUPS, POSITIONS, positionLabelsOf, positionOf } from "../data/positions";
-import { personalizationLabels } from "../data/personalization";
+import { personalizationLabels } from "../data/departments";
 import { formatUaShort } from "../utils/userAgent";
 import { formatCountry } from "../utils/countries";
 import { formatIp } from "../utils/ip";
-import "./CabinetPage.css";
+import "./Cabinet.css";
 import "../components/Announcements.css";
 
 const APPOINTMENT_STATUS_LABELS_UI: Record<string, string> = {
@@ -737,7 +737,7 @@ function ReviewPanel({
   };
 
   const onDelete = async (id: string) => {
-    if (!window.confirm("Видалити цю заявку назавжди?")) return;
+    if (!window.confirm(kind === "jobs" ? "Видалити цю заявку назавжди?" : "Видалити це звернення назавжди?")) return;
     setMsg(null);
     const res = await deleteApplication(id);
     if (!res.ok) {
@@ -914,7 +914,7 @@ function ReviewPanel({
         <ProfileModal user={profileUser} onClose={() => setProfileUser(null)} />
       )}
       {assignFor && (
-        <AssignPositionsModal user={assignFor} onClose={() => setAssignFor(null)} />
+        <SetPositionsModal user={assignFor} onClose={() => setAssignFor(null)} />
       )}
     </div>
   );
@@ -1173,7 +1173,7 @@ function RolesPanel() {
   const [employees, setEmployees] = useState<StaffEmployeeItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
-  const [statusF, setStatusF] = useState("");
+  const [statusF, setStatusF] = useState("staff");
   const [posF, setPosF] = useState("");
   const [specF, setSpecF] = useState("");
   const [tableOpen, setTableOpen] = useState(false);
@@ -1361,7 +1361,9 @@ function RolesPanel() {
   const visible = employees.filter((e) => {
     const st = toStaffStatus(e.staffStatus);
     const pos = e.roles.filter((r) => r !== "sysadmin");
-    if (statusF && st !== statusF) return false;
+    if (statusF === "staff") {
+      if (st === "patient") return false;
+    } else if (statusF && st !== statusF) return false;
     if (posF && !pos.includes(posF)) return false;
     if (specF && (e.specialization ?? "").trim() !== specF) return false;
     if (!q) return true;
@@ -1372,6 +1374,10 @@ function RolesPanel() {
       pos.some((r) => (ROLE_LABELS_UI[r] ?? r).toLowerCase().includes(q))
     );
   });
+
+  const staffTotal = employees.filter(
+    (e) => toStaffStatus(e.staffStatus) !== "patient",
+  ).length;
 
   const chipRoles = selected
     ? selected.roles.filter(
@@ -1397,7 +1403,7 @@ function RolesPanel() {
           className="portal-cta"
           onClick={() => setTableOpen(true)}
         >
-          Список працівників ({loading ? "..." : employees.length})
+          Список працівників ({loading ? "..." : staffTotal})
         </button>
 
         <p className="cabinet-profile-note" style={{ marginTop: "1rem" }}>
@@ -1507,6 +1513,7 @@ function RolesPanel() {
                 <label className="users-modal__filter">
                   Статус
                   <select value={statusF} onChange={(e) => setStatusF(e.target.value)}>
+                    <option value="staff">Працівники</option>
                     <option value="">Усі</option>
                     {STAFF_STATUS_ORDER.map((s) => (
                       <option key={s} value={s}>
@@ -4184,6 +4191,7 @@ function UsersBanPanel() {
   const [auditDateTo, setAuditDateTo] = useState("");
   const [auditActorF, setAuditActorF] = useState("");
   const [auditMsgs, setAuditMsgs] = useState(false);
+  const [auditOpen, setAuditOpen] = useState(false);
   const [archives, setArchives] = useState<AuditArchiveItem[]>([]);
   const [emails, setEmails] = useState<EmailLogItem[]>([]);
   const [shownCodes, setShownCodes] = useState<Set<string>>(new Set());
@@ -4516,6 +4524,33 @@ function UsersBanPanel() {
       <div className="p-block">
         <div className="p-block__head p-block__head--teal">Журнал дій</div>
         <div className="p-block__body">
+          <p className="cabinet-profile-note">
+            Записів: {audit.length}. Пошук, фільтри та архіви — в окремому вікні.
+          </p>
+          <button
+            type="button"
+            className="cabinet-action cabinet-action--review"
+            onClick={() => setAuditOpen(true)}
+          >
+            Відкрити журнал дій
+          </button>
+        </div>
+      </div>
+
+      {auditOpen && (
+        <div className="users-modal-overlay" onClick={() => setAuditOpen(false)}>
+          <div className="users-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="users-modal__head">
+              <strong>Журнал дій</strong>
+              <button
+                type="button"
+                className="profile-modal__close"
+                onClick={() => setAuditOpen(false)}
+              >
+                ×
+              </button>
+            </div>
+            <div className="users-modal__scroll">
           <div className="audit-toolbar">
             <input
               type="search"
@@ -4621,8 +4656,10 @@ function UsersBanPanel() {
               </ul>
             )}
           </div>
+            </div>
+          </div>
         </div>
-      </div>
+      )}
 
       <div className="p-block">
         <div className="p-block__head p-block__head--teal">Останні листи</div>

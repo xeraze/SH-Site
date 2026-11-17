@@ -17,6 +17,9 @@ export interface PublicUser {
   avatar: string | null;
   roles: string[];
   roleLabels: RoleLabel[];
+  specialization: string | null;
+  personalization: string[];
+  staffStatus: string;
   needsProfile: boolean;
   emailNotifications: boolean;
   hasPassword: boolean;
@@ -50,6 +53,9 @@ export interface ApplicationItem {
     bio?: string | null;
     avatar?: string | null;
     roles?: string[];
+    specialization?: string | null;
+    personalization?: string[];
+    staffStatus?: string;
     discordUsername?: string | null;
     robloxUsername?: string | null;
   };
@@ -61,6 +67,9 @@ export interface ApplicationItem {
     bio?: string | null;
     avatar: string | null;
     roles?: string[];
+    specialization?: string | null;
+    personalization?: string[];
+    staffStatus?: string;
     discordUsername?: string | null;
     robloxUsername?: string | null;
   } | null;
@@ -137,6 +146,9 @@ export interface AppointmentItem {
     bio?: string | null;
     avatar?: string | null;
     roles?: string[];
+    specialization?: string | null;
+    personalization?: string[];
+    staffStatus?: string;
     discordUsername?: string | null;
     robloxUsername?: string | null;
   };
@@ -148,6 +160,9 @@ export interface AppointmentItem {
     bio?: string | null;
     avatar: string | null;
     roles?: string[];
+    specialization?: string | null;
+    personalization?: string[];
+    staffStatus?: string;
     discordUsername?: string | null;
     robloxUsername?: string | null;
   } | null;

@@ -11,8 +11,9 @@ import {
   type PersonalizationItem,
 } from "../api";
 import { POSITION_GROUPS, ROLE_LABELS_UI, positionOf } from "../data/positions";
+import { ConfettiOnMount } from "./Confetti";
 
-export function AssignPositionsModal({
+export function SetPositionsModal({
   user,
   onClose,
 }: {
@@ -118,6 +119,7 @@ export function AssignPositionsModal({
   return (
     <div className="users-modal-overlay" onClick={onClose}>
       <div className="users-modal" onClick={(e) => e.stopPropagation()}>
+        <ConfettiOnMount />
         <div className="users-modal__head">
           <strong>Призначення — {user.name}</strong>
           <button type="button" className="profile-modal__close" onClick={onClose}>
@@ -127,7 +129,7 @@ export function AssignPositionsModal({
         <div className="users-modal__scroll staff-manage">
           <p className="cabinet-profile-note">
             Статус «Працівник лікарні» надано автоматично разом із прийняттям
-            заявки. Вкажіть посади, спеціалізацію та видимі в профілі ролі —
+            заявки на посаду. Вкажіть посади, спеціалізацію та видимі в профілі ролі —
             за потребою одразу або пізніше в «Управлінні».
           </p>
           {loading && <p className="cabinet-profile-note">Завантаження...</p>}
@@ -142,8 +144,7 @@ export function AssignPositionsModal({
               <section className="staff-manage__section">
                 <h4 className="staff-manage__title">Посади</h4>
                 <p className="cabinet-profile-note">
-                  Посади надають права на сайті. Свою посаду та вищі видати не
-                  можна.
+                  Посади надають права на сайті. Свою посаду та вище видати неможливо.
                 </p>
                 {POSITION_GROUPS.map((group) => {
                   const list = assignable.filter((r) => positionOf(r)?.group === group.id);
@@ -187,7 +188,7 @@ export function AssignPositionsModal({
               <section className="staff-manage__section">
                 <h4 className="staff-manage__title">Ролі (персоналізація)</h4>
                 <p className="cabinet-profile-note">
-                  Видима в профілі інформація: підрозділ, адміністрація. Прав не
+                  Видима в профілі інформація: підрозділ тощо. Прав не
                   надає.
                 </p>
                 {registry &&

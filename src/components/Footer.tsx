@@ -13,8 +13,8 @@ export function Footer() {
             лікарня" Слобідської міської ради.
           </p>
           <p className="footer__note">
-            Медичний рольовий проект розроблений на платформі Roblox.
-            Офіційний веб-портал який створено для зручності{" "}
+            Медичний рольовий проєкт, розроблений на платформі Roblox.
+            Офіційний веб-портал, створений для зручності{" "}
             <span className="footer__note-ending">
               гравців!
               <Icon icon="mdi:heart" width={12} height={12} className="footer__heart" />
@@ -41,7 +41,7 @@ export function Footer() {
 
       <div className="footer__bottom container">
         <span>
-          © {new Date().getFullYear()} Слобідська ЦРЛ. Рольовий проєкт спільноти.
+          © {new Date().getFullYear()} Слобідська ЦРЛ. РП-проєкт у Roblox.
         </span>
       </div>
     </footer>

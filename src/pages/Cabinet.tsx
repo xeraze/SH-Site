@@ -46,7 +46,6 @@ import {
   type SettingsData,
   type SettingsField,
 } from "../api";
-import { Link } from "../components/AppLink";
 import { TurnstileField } from "../components/TurnstileField";
 import { hrefFor } from "../utils/links";
 import { formatUaShort } from "../utils/userAgent";
@@ -60,8 +59,14 @@ import {
   formatFileSize,
   readDocDataUrl,
 } from "../utils/chatFiles";
-import { ROLE_ICONS_UI } from "../data/roles";
-import "./CabinetPage.css";
+import {
+  ROLE_ICONS_UI,
+  ROLE_LABELS_UI,
+  STAFF_STATUS_LABELS,
+  toStaffStatus,
+} from "../data/status";
+import { personalizationLabels } from "../data/departments";
+import "./Cabinet.css";
 import "../components/Announcements.css";
 
 const ROBLOX_USERNAME_RE = /^[A-Za-z0-9_]{3,20}$/;
@@ -457,7 +462,10 @@ export function CabinetPage() {
     }
 
     const tabParam = url.searchParams.get("tab");
-    if (tabParam === "profile" || tabParam === "apps" || tabParam === "appts" || tabParam === "settings") {
+    if (tabParam === "appts") {
+      setInitialTab("apps");
+      url.searchParams.delete("tab");
+    } else if (tabParam === "profile" || tabParam === "apps" || tabParam === "settings") {
       setInitialTab(tabParam);
       url.searchParams.delete("tab");
     }
@@ -505,6 +513,7 @@ export function CabinetPage() {
   }, [inviteToken, user]);
 
   const onLogout = async () => {
+    if (!window.confirm("Точно хочете вийти з облікового запису?")) return;
     await logout();
     setUser(null);
     setApplications([]);
@@ -550,7 +559,7 @@ export function CabinetPage() {
     <PortalLayout title="Особистий кабінет">
       {!user && (
         <p className="p-lead">
-          Увійдіть або зареєструйтеся, щоб подавати та відстежувати заявки, а також
+          Увійдіть або зареєструйтеся, щоб подавати заповнені анкети та відстежувати їх статус, а також
           керувати своїми персональними даними.
         </p>
       )}
@@ -685,34 +694,11 @@ export function CabinetPage() {
         </>
       )}
 
-      <div className="p-block">
-        <div className="p-block__head">Як це працює</div>
-        <div className="p-block__body">
-          <ul className="p-list">
-            <li>Гість — переглядає сайт, але не може подавати заявки.</li>
-            <li>
-              Реєстрація: вкажіть лише email і пароль — на пошту надійде
-              6-значний код підтвердження.
-            </li>
-            <li>
-              Після першого входу або після оновлення системи вас одноразово
-              попросять заповнити обов&apos;язковий профіль. Поки Roblox Username не
-              буде вказано, подання заявок та записів недоступне.
-            </li>
-            <li>
-              Вхід: email і пароль (підтверджується кодом на пошту) або
-              обліковий запис Google.
-            </li>
-            <li>Нові користувачі отримують роль "Пацієнт".</li>
-            <li>Посади призначаються генеральним або медичним директором.</li>
-          </ul>
-        </div>
-      </div>
     </PortalLayout>
   );
 }
 
-type CabinetTab = "profile" | "apps" | "appts" | "settings";
+type CabinetTab = "profile" | "apps" | "settings";
 
 function CabinetTabs({
   user,
@@ -756,25 +742,20 @@ function CabinetTabs({
     { id: "profile", label: "Профіль", desc: "Персональні дані та аватар", icon: "mdi:account-circle", badge: 0 },
     {
       id: "apps",
-      label: "Мої заявки",
-      desc: "Звернення та статуси",
+      label: "Мої анкети",
+      desc: "Анкети, записи та статуси",
       icon: "mdi:file-document-edit-outline",
-      badge: unread.applications,
-    },
-    {
-      id: "appts",
-      label: "Записи на прийом",
-      desc: "Запити та дати",
-      icon: "mdi:calendar-clock",
-      badge: unread.appointments,
+      badge: unread.applications + unread.appointments,
     },
     { id: "settings", label: "Налаштування", desc: "Пароль, пошта, Google", icon: "mdi:cog-outline", badge: 0 },
   ];
 
   const openTab = (t: CabinetTab) => {
     setTab((prev) => (prev === t ? null : t));
-    if (t === "apps") void markSeen("applications");
-    if (t === "appts") void markSeen("appointments");
+    if (t === "apps") {
+      void markSeen("applications");
+      void markSeen("appointments");
+    }
     onNavigate();
   };
 
@@ -802,73 +783,65 @@ function CabinetTabs({
 
       {tab === "apps" && (
         <div className="p-block">
-          <div className="p-block__head p-block__head--teal">Мої заявки</div>
-          <div className="p-block__body">
-            {applications.length === 0 ? (
-              <div className="cabinet-empty">
-                <p>Ще немає звернень. Подайте першу заявку.</p>
-                <Link to="/zayavky" className="portal-cta">
-                  Подати заявку
-                </Link>
-              </div>
-            ) : (
-              <ul className="cabinet-apps">
-                {applications.map((app) => (
-                  <li
-                    key={app.id}
-                    id={`app-${app.id}`}
-                    className={`cabinet-apps__wrap${highlight === app.id ? " is-highlighted" : ""}`}
-                  >
-                    <AppItem app={app} user={user} />
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </div>
-      )}
-
-      {tab === "appts" && (
-        <div className="p-block">
-          <div className="p-block__head p-block__head--teal">Записи на прийом</div>
+          <div className="p-block__head p-block__head--teal">Мої анкети</div>
           <div className="p-block__body">
             <p className="cabinet-profile-note">
-              Подати новий запит можна на{" "}
-              <Link to="/zapys-na-pryiom">публичній сторінці запису</Link>.
+              Заповнити нову анкету — заявку на посаду, звернення або запис на
+              прийом — можна на сторінці «Анкети».
             </p>
-            {appointments.length === 0 ? (
+            {applications.length === 0 && appointments.length === 0 ? (
               <div className="cabinet-empty">
-                <p>Ще немає записів.</p>
-                <Link to="/zapys-na-pryiom" className="portal-cta">
-                  Записатися на прийом
-                </Link>
+                <p>Ще немає заповнених анкет.</p>
               </div>
             ) : (
-              <ul className="cabinet-apps">
-                {appointments.map((a) => (
-                  <li key={a.id} className="cabinet-apps__item">
-                    <div className="cabinet-apps__head">
-                      <strong>Запис на прийом</strong>
-                      <span className={`cabinet-apps__status cabinet-apps__status--${a.status}`}>
-                        {apStatusUi[a.status] ?? a.statusLabel}
-                      </span>
-                    </div>
-                    <div className="cabinet-apps__date">
-                      Бажана дата: {a.wantDate} ·{" "}
-                      {new Date(a.createdAt + "Z").toLocaleString("uk-UA")}
-                    </div>
-                    <div className="cabinet-review-answers">
-                      <p>{a.body}</p>
-                    </div>
-                    {(a.status === "accepted" || a.status === "rejected") && (
-                      <div className="cabinet-apps__note">
-                        Причина: {a.decisionNote || "Не вказана"}
-                      </div>
-                    )}
-                    <AppointmentChat appointment={a} user={user} />
-                  </li>
-                ))}
-              </ul>
+              <>
+                {applications.length > 0 && (
+                  <>
+                    <div className="cabinet-apps__group">Заявки та звернення</div>
+                    <ul className="cabinet-apps">
+                      {applications.map((app) => (
+                        <li
+                          key={app.id}
+                          id={`app-${app.id}`}
+                          className={`cabinet-apps__wrap${highlight === app.id ? " is-highlighted" : ""}`}
+                        >
+                          <AppItem app={app} user={user} />
+                        </li>
+                      ))}
+                    </ul>
+                  </>
+                )}
+                {appointments.length > 0 && (
+                  <>
+                    <div className="cabinet-apps__group">Записи на прийом</div>
+                    <ul className="cabinet-apps">
+                      {appointments.map((a) => (
+                        <li key={a.id} className="cabinet-apps__item">
+                          <div className="cabinet-apps__head">
+                            <strong>Запис на прийом</strong>
+                            <span className={`cabinet-apps__status cabinet-apps__status--${a.status}`}>
+                              {apStatusUi[a.status] ?? a.statusLabel}
+                            </span>
+                          </div>
+                          <div className="cabinet-apps__date">
+                            Бажана дата: {a.wantDate} ·{" "}
+                            {new Date(a.createdAt + "Z").toLocaleString("uk-UA")}
+                          </div>
+                          <div className="cabinet-review-answers">
+                            <p>{a.body}</p>
+                          </div>
+                          {(a.status === "accepted" || a.status === "rejected") && (
+                            <div className="cabinet-apps__note">
+                              Причина: {a.decisionNote || "Не вказана"}
+                            </div>
+                          )}
+                          <AppointmentChat appointment={a} user={user} />
+                        </li>
+                      ))}
+                    </ul>
+                  </>
+                )}
+              </>
             )}
           </div>
         </div>
@@ -1539,11 +1512,33 @@ function ProfileTab({
   const registered = user.createdAt
     ? new Date(user.createdAt + "Z").toLocaleDateString("uk-UA")
     : "—";
+  const positionsText = user.roles
+    .filter((r) => r !== "patient" && r !== "employee" && r !== "sysadmin")
+    .map((r) => ROLE_LABELS_UI[r] ?? r)
+    .join(", ");
+  const personalization = personalizationLabels(user.personalization ?? []);
+  const rolesText = personalization
+    .filter((p) => !p.id.startsWith("dept_"))
+    .map((p) => p.label)
+    .join(", ");
+  const deptText = personalization
+    .filter((p) => p.id.startsWith("dept_"))
+    .map((p) => p.label)
+    .join(", ");
 
   return (
     <div className="p-block">
       <div className="p-block__head p-block__head--teal">Профіль</div>
       <div className="p-block__body">
+        <p className="cabinet-profile-note">
+          Статус: <strong>{STAFF_STATUS_LABELS[toStaffStatus(user.staffStatus)]}</strong>
+          {positionsText && <> · Посада: {positionsText}</>}
+          {rolesText && <> · Ролі: {rolesText}</>}
+          {user.specialization?.trim() && (
+            <> · Спеціалізація: {user.specialization.trim()}</>
+          )}
+          {deptText && <> · Відділення: {deptText}</>}
+        </p>
         <p className="cabinet-profile-note">Дата реєстрації: {registered}</p>
         <form onSubmit={onSubmit} className="cabinet-profile-form">
           <div className="cabinet-avatar-field">

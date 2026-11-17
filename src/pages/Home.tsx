@@ -4,10 +4,10 @@ import { renderInline, stripShortFormatting } from "../components/annMarkdown";
 import { Link } from "../components/AppLink";
 import { PortalLayout } from "../components/PortalLayout";
 import { departments } from "../data/hierarchy";
-import "./HomePage.css";
+import "./Home.css";
 
 const TICKER_PLACEHOLDER =
-  "Тут відображуються короткі оголошення! Додайте їх у кабінеті, розділ «Оголошення».";
+  "Тут відображуються короткі оголошення! Очікуйте нові повідомлення та будьте в курсі бліц-подій у лікарні!";
 
 const MARQUEE_SPEED_PX_S = 60;
 const MARQUEE_MIN_DURATION_S = 8;
@@ -91,9 +91,9 @@ export function HomePage() {
 
       <p className="p-lead">
         Комунальне некомерційне підприємство "Слобідська центральна районна
-        лікарня" Слобідської міської ради — медичний рольовий проєкт спільноти
-        Roblox. Тут ви знайдете відомості про структуру лікарні, персонал та
-        порядок звернення.
+        лікарня" Слобідської міської ради — це медичний рольовий проєкт,
+        розроблений на платформі Roblox. Тут ви знайдете відомості про структуру
+        лікарні, персонал та порядок звернення до лікаря.
       </p>
 
       <div className="home-stats home-stats--two">

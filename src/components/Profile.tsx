@@ -1,7 +1,13 @@
 import { useEffect, useState } from "react";
 import { Icon } from "@iconify/react";
-import { ROLE_LABELS_UI, ROLE_ICONS_UI, STAFF_STATUS_LABELS, isStaffStatus } from "../data/roles";
-import { personalizationLabels } from "../data/personalization";
+import {
+  ROLE_LABELS_UI,
+  ROLE_ICONS_UI,
+  STAFF_STATUS_LABELS,
+  isStaffStatus,
+  toStaffStatus,
+} from "../data/status";
+import { personalizationLabels } from "../data/departments";
 import { positionOf } from "../data/positions";
 import { fetchMe, getToken, type PublicUser } from "../api";
 
@@ -49,6 +55,7 @@ export function ProfileModal({
   const roles = (user.roles ?? []).filter((r) => r !== "sysadmin");
   const positions = roles.filter((r) => r !== "patient" && r !== "employee");
   const badges = roles.filter((r) => r !== "patient" && r !== "employee");
+  const status = toStaffStatus(user.staffStatus);
   const personalization = personalizationLabels(user.personalization ?? []);
   const roleItems = personalization.filter((p) => !p.id.startsWith("dept_"));
   const deptItems = personalization.filter((p) => p.id.startsWith("dept_"));
@@ -130,13 +137,24 @@ export function ProfileModal({
             </div>
           </div>
 
-          {(positions.length > 0 || personalization.length > 0) && (
-            <section className="profile-modal__section">
+          <section className="profile-modal__section">
               <div className="profile-modal__section-title">
                 <Icon icon="mdi:briefcase-outline" width={14} height={14} />
                 Робота в лікарні
               </div>
+              <div className="profile-modal__row">
+                <span className="profile-modal__row-label">Статус</span>
+                <span className="profile-modal__row-value">{STAFF_STATUS_LABELS[status]}</span>
+              </div>
               {positions.length > 0 && (
+                <div className="profile-modal__row">
+                  <span className="profile-modal__row-label">Посада</span>
+                  <span className="profile-modal__row-value">
+                    {positions.map((r) => ROLE_LABELS_UI[r] ?? r).join(", ")}
+                  </span>
+                </div>
+              )}
+              {(positions.length > 0 || user.specialization?.trim()) && (
                 <div className="profile-modal__row">
                   <span className="profile-modal__row-label">Спеціалізація</span>
                   <span className="profile-modal__row-value">
@@ -160,8 +178,7 @@ export function ProfileModal({
                   </span>
                 </div>
               )}
-            </section>
-          )}
+          </section>
 
           {!isPublic && (
             <section className="profile-modal__section">

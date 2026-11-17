@@ -3,11 +3,12 @@ import { useParams } from "react-router-dom";
 import { Icon } from "@iconify/react";
 import { Link } from "../components/AppLink";
 import { departments } from "../data/hierarchy";
+import { positionOf } from "../data/positions";
 import { fetchDepartmentStaffOnce, type DepartmentStaffItem } from "../api";
-import { ROLE_LABELS_UI } from "../data/roles";
+import { ROLE_LABELS_UI } from "../data/status";
 import { PortalLayout } from "../components/PortalLayout";
-import { ProfileModal, type ProfileUser } from "../components/ProfileModal";
-import "./DepartmentsPage.css";
+import { ProfileModal, type ProfileUser } from "../components/Profile";
+import "./Departments.css";
 
 function useDepartmentStaff(): DepartmentStaffItem[] | null {
   const [staff, setStaff] = useState<DepartmentStaffItem[] | null>(null);
@@ -30,6 +31,21 @@ function positionLabels(roles: string[]): string {
     .filter((r) => r !== "patient" && r !== "employee" && r !== "sysadmin")
     .map((r) => ROLE_LABELS_UI[r] ?? r)
     .join(", ");
+}
+
+function staffRank(person: DepartmentStaffItem): number {
+  let rank = -1;
+  for (const role of person.roles) {
+    const pos = positionOf(role);
+    if (pos && pos.id !== "patient") rank = Math.max(rank, pos.rank);
+  }
+  return rank;
+}
+
+function sortStaff(list: DepartmentStaffItem[]): DepartmentStaffItem[] {
+  return [...list].sort(
+    (a, b) => staffRank(b) - staffRank(a) || a.name.localeCompare(b.name, "uk"),
+  );
 }
 
 function PersonAvatar({ person }: { person: DepartmentStaffItem }) {
@@ -112,20 +128,22 @@ export function DepartmentsPage() {
         <PortalLayout title="Відділення лікарні">
           <p className="p-lead">Відділення не знайдено.</p>
           <p className="dept-back">
-            <Link to="/viddilennya">← Усі відділення</Link>
+            <Link to="/departments">← Усі відділення</Link>
           </p>
         </PortalLayout>
       );
     }
 
-    const deptStaff = (staff ?? []).filter((s) => s.personalization.includes(dept.id));
+    const deptStaff = sortStaff(
+      (staff ?? []).filter((s) => s.personalization.includes(dept.id)),
+    );
 
     return (
       <PortalLayout title={dept.name}>
         <p className="p-lead">{dept.description}</p>
 
         <p className="dept-back">
-          <Link to="/viddilennya">← Усі відділення</Link>
+          <Link to="/departments">← Усі відділення</Link>
         </p>
 
         <div className="p-block">
@@ -137,7 +155,7 @@ export function DepartmentsPage() {
             {staff === null ? (
               <p className="dept-note">Завантаження…</p>
             ) : deptStaff.length === 0 ? (
-              <p className="dept-note">Працівників поки немає.</p>
+              <p className="dept-note">У цьому відділенні поки що немає працівників.</p>
             ) : (
               <ul className="staff-list">
                 {deptStaff.map((person) => (
@@ -166,8 +184,8 @@ export function DepartmentsPage() {
   return (
     <PortalLayout title="Відділення лікарні">
       <p className="p-lead">
-        Персонал лікарні організовано за відділеннями. Оберіть відділення, щоб
-        переглянути працівників.
+        Персонал лікарні розподілено за відділеннями.
+        Оберіть відділення, щоб переглянути інформацію про це відділення або про працівників цього відділення.
       </p>
 
       <div className="p-block">
@@ -180,7 +198,7 @@ export function DepartmentsPage() {
             const count = counts.get(dept.id) ?? 0;
             return (
               <li key={dept.id}>
-                <Link to={`/viddilennya/${dept.id}`} className="dept-list__item">
+                <Link to={`/departments/${dept.id}`} className="dept-list__item">
                   <span className="dept-list__index">{String(i + 1).padStart(2, "0")}</span>
                   <span className="dept-list__body">
                     <strong>{dept.name}</strong>

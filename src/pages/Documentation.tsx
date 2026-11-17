@@ -5,7 +5,7 @@ import { renderMiniMarkdown } from "../components/annMarkdown";
 import { Lightbox, VideoPreview } from "../components/Announcements";
 import { PortalLayout } from "../components/PortalLayout";
 import { formatFileSize } from "../utils/chatFiles";
-import "./DocumentationPage.css";
+import "./Documentation.css";
 
 function fileIcon(ext: string): string {
   if (ext === "pdf") return "mdi:file-pdf-box";
@@ -84,8 +84,8 @@ function DocFilePreview({ file }: { file: { name: string; url: string; size: num
               {ext === "pdf" && <iframe src={file.url} title={file.name} loading="lazy" />}
               {ext !== "txt" && ext !== "pdf" && (
                 <p className="docs-empty">
-                  Вбудований перегляд недоступний для цього формату — завантажте
-                  файл, щоб переглянути його у своїй програмі.
+                  Вбудований перегляд недоступний для цього формату - завантажте
+                  файл, щоб переглянути його.
                 </p>
               )}
             </div>
@@ -209,8 +209,8 @@ export function DocumentationPage() {
   return (
     <PortalLayout title="Документація">
       <p className="p-lead">
-        Нормативні документи, положення та інструкції лікарні, зібрані за
-        категоріями.
+        Нормативні документи, положення та інструкції лікарні розподілені по
+        категоріям.
       </p>
 
       {items.length === 0 ? (

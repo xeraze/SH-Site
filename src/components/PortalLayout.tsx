@@ -25,7 +25,7 @@ export function PortalLayout({ title, children, aside }: PortalLayoutProps) {
             <ul className="portal-menu">
               {departments.map((dept) => (
                 <li key={dept.id}>
-                  <Link to={`/viddilennya/${dept.id}`} className="portal-menu__link">
+                  <Link to={`/departments/${dept.id}`} className="portal-menu__link">
                     <span className="portal-menu__marker" aria-hidden="true">
                       ▸
                     </span>
@@ -47,10 +47,10 @@ export function PortalLayout({ title, children, aside }: PortalLayoutProps) {
             <div className="portal-box__head">Запис на прийом</div>
             <div className="portal-box__body portal-box__body--text">
               <p>
-                Запишіться на прийом онлайн — оберіть відділення, бажану дату
-                та час.
+                Запишіться на прийом онлайн — оберіть бажану дату та час,
+                а оператор кол-центру підтвердить запис.
               </p>
-              <Link to="/zapys-na-pryiom" className="portal-cta">
+              <Link to="/forms?type=appointment" className="portal-cta">
                 Записатися
               </Link>
             </div>
@@ -60,9 +60,9 @@ export function PortalLayout({ title, children, aside }: PortalLayoutProps) {
             <div className="portal-box__head">Про проєкт</div>
             <div className="portal-box__body portal-box__body--text">
               <p>
-                Слобідська ЦРЛ — медичний рольовий проект розроблений на платформі
+                Слобідська ЦРЛ — медичний рольовий проєкт, розроблений на платформі
                 Roblox, який відтворює роботу української лікарні. Ми фокусуємося на реалізмі та атмосферній грі.
-Як пацієнт: просто заходьте у гру. Ви можете звертатися до медиків за допомогою, коли вони присутні на зміні.
+Як пацієнт: просто загляньте у гру. Ви можете звертатися до медиків за допомогою, коли вони присутні на зміні.
 Як медик: хочете рятувати життя, ставити діагнози та керувати процесами? Подавайте заявку на відповідну роль у грі на нашому сайті.
               </p>
             </div>
