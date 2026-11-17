@@ -24,11 +24,9 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
 
-  // Для SPA: завжди повертаємо shell (index.html) для навігаційних запитів
   event.respondWith(
     fetch(request)
       .then((res) => {
-        // Якщо отримали 404 або redirect — повертаємо shell
         if (!res.ok || res.redirected) {
           return fetch(SHELL, { cache: "no-store" });
         }
