@@ -1173,7 +1173,7 @@ function RolesPanel() {
   const [employees, setEmployees] = useState<StaffEmployeeItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
-  const [statusF, setStatusF] = useState("staff");
+  const [statusF, setStatusF] = useState("");
   const [posF, setPosF] = useState("");
   const [specF, setSpecF] = useState("");
   const [tableOpen, setTableOpen] = useState(false);
@@ -1361,9 +1361,7 @@ function RolesPanel() {
   const visible = employees.filter((e) => {
     const st = toStaffStatus(e.staffStatus);
     const pos = e.roles.filter((r) => r !== "sysadmin");
-    if (statusF === "staff") {
-      if (st === "patient") return false;
-    } else if (statusF && st !== statusF) return false;
+    if (statusF && st !== statusF) return false;
     if (posF && !pos.includes(posF)) return false;
     if (specF && (e.specialization ?? "").trim() !== specF) return false;
     if (!q) return true;
@@ -1374,10 +1372,6 @@ function RolesPanel() {
       pos.some((r) => (ROLE_LABELS_UI[r] ?? r).toLowerCase().includes(q))
     );
   });
-
-  const staffTotal = employees.filter(
-    (e) => toStaffStatus(e.staffStatus) !== "patient",
-  ).length;
 
   const chipRoles = selected
     ? selected.roles.filter(
@@ -1403,7 +1397,7 @@ function RolesPanel() {
           className="portal-cta"
           onClick={() => setTableOpen(true)}
         >
-          Список працівників ({loading ? "..." : staffTotal})
+          Список працівників ({loading ? "..." : employees.length})
         </button>
 
         <p className="cabinet-profile-note" style={{ marginTop: "1rem" }}>
@@ -1513,7 +1507,6 @@ function RolesPanel() {
                 <label className="users-modal__filter">
                   Статус
                   <select value={statusF} onChange={(e) => setStatusF(e.target.value)}>
-                    <option value="staff">Працівники</option>
                     <option value="">Усі</option>
                     {STAFF_STATUS_ORDER.map((s) => (
                       <option key={s} value={s}>
@@ -3689,11 +3682,8 @@ export function PanelPage() {
                 </div>
                 <div className="p-block__body">
                   <p className="panel-overview__lead">
-                    Це головна сторінка вашої панелі. Нижче — розділи, до яких
-                    у вас є доступ за посадами, із коротким описом, що всередині.
-                    Нові заявки, звернення та записи видно під дзвіночком
-                    «Сповіщення» у шапці. У кожному розділі є кнопка «Назад до
-                    огляду».
+                    Це головна сторінка панелі медичного працівника. Нижче показуються розділи з описом, до яких
+                    у вас є доступ за посадами. У кожному розділі є кнопка «Назад до огляду».
                   </p>
                   {tabs.length === 0 ? (
                     <div className="panel-overview__empty">
@@ -4191,7 +4181,6 @@ function UsersBanPanel() {
   const [auditDateTo, setAuditDateTo] = useState("");
   const [auditActorF, setAuditActorF] = useState("");
   const [auditMsgs, setAuditMsgs] = useState(false);
-  const [auditOpen, setAuditOpen] = useState(false);
   const [archives, setArchives] = useState<AuditArchiveItem[]>([]);
   const [emails, setEmails] = useState<EmailLogItem[]>([]);
   const [shownCodes, setShownCodes] = useState<Set<string>>(new Set());
@@ -4524,33 +4513,6 @@ function UsersBanPanel() {
       <div className="p-block">
         <div className="p-block__head p-block__head--teal">Журнал дій</div>
         <div className="p-block__body">
-          <p className="cabinet-profile-note">
-            Записів: {audit.length}. Пошук, фільтри та архіви — в окремому вікні.
-          </p>
-          <button
-            type="button"
-            className="cabinet-action cabinet-action--review"
-            onClick={() => setAuditOpen(true)}
-          >
-            Відкрити журнал дій
-          </button>
-        </div>
-      </div>
-
-      {auditOpen && (
-        <div className="users-modal-overlay" onClick={() => setAuditOpen(false)}>
-          <div className="users-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="users-modal__head">
-              <strong>Журнал дій</strong>
-              <button
-                type="button"
-                className="profile-modal__close"
-                onClick={() => setAuditOpen(false)}
-              >
-                ×
-              </button>
-            </div>
-            <div className="users-modal__scroll">
           <div className="audit-toolbar">
             <input
               type="search"
@@ -4656,10 +4618,8 @@ function UsersBanPanel() {
               </ul>
             )}
           </div>
-            </div>
-          </div>
         </div>
-      )}
+      </div>
 
       <div className="p-block">
         <div className="p-block__head p-block__head--teal">Останні листи</div>
