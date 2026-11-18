@@ -47,7 +47,7 @@ export function PortalLayout({ title, children, aside }: PortalLayoutProps) {
             <div className="portal-box__head">Запис на прийом</div>
             <div className="portal-box__body portal-box__body--text">
               <p>
-                Запишіться на прийом онлайн — оберіть бажану дату та час,
+                Запишіться на прийом онлайн! Оберіть бажану дату та час,
                 а оператор кол-центру підтвердить запис.
               </p>
               <Link to="/forms?type=appointment" className="portal-cta">

@@ -357,14 +357,14 @@ function AuthBox({
           Увійти через Google
         </a>
         <p className="cabinet-auth-note">
-          Через Google акаунт створюється одразу — підтвердження пошти бере на себе Google.
+          Через Google акаунт, обліковий запис створюється одразу. Підтвердження пошти бере на себе Google.
         </p>
         <a href={discordLoginUrl(inviteToken ? `?invite=${inviteToken}` : undefined)} className="cabinet-google">
           <Icon icon="mdi:discord" width={18} height={18} />
           Увійти через Discord
         </a>
         <p className="cabinet-auth-note">
-          Реєстрація через Discord недоступна — спочатку зареєструйтеся, потім прив'яжіть Discord у налаштуваннях.
+          Реєстрація через Discord недоступна, але можна увійти через нього, якщо акаунт уже створено.
         </p>
       </div>
     </div>
@@ -743,11 +743,11 @@ function CabinetTabs({
     {
       id: "apps",
       label: "Мої анкети",
-      desc: "Анкети, записи та статуси",
+      desc: "Анкети та їх статуси",
       icon: "mdi:file-document-edit-outline",
       badge: unread.applications + unread.appointments,
     },
-    { id: "settings", label: "Налаштування", desc: "Пароль, пошта, Google", icon: "mdi:cog-outline", badge: 0 },
+    { id: "settings", label: "Налаштування", desc: "Сповіщення, пароль, пошта", icon: "mdi:cog-outline", badge: 0 },
   ];
 
   const openTab = (t: CabinetTab) => {
@@ -786,8 +786,8 @@ function CabinetTabs({
           <div className="p-block__head p-block__head--teal">Мої анкети</div>
           <div className="p-block__body">
             <p className="cabinet-profile-note">
-              Заповнити нову анкету — заявку на посаду, звернення або запис на
-              прийом — можна на сторінці «Анкети».
+              Заповнити нову анкету (заявку на посаду, звернення або запис на
+              прийом) можна на сторінці «Анкети».
             </p>
             {applications.length === 0 && appointments.length === 0 ? (
               <div className="cabinet-empty">
@@ -2026,7 +2026,7 @@ function GoogleBlock({ user }: { user: PublicUser }) {
           )}
         </div>
         <p className="cabinet-auth-note">
-          Google-вхід доступний лише для прив'язаних акаунтів.
+          Google аккаунт доступний як для реєстрації, так і для входу, якщо акаунт уже створено.
         </p>
         {msg && (
           <p
@@ -2092,7 +2092,7 @@ function DiscordLinkRow({ user, showNote }: { user: PublicUser; showNote?: boole
       </div>
       {showNote && (
         <p className="cabinet-auth-note">
-          Реєстрація через Discord недоступна — лише вхід і прив'язка наявного акаунта.
+          Реєстрація через Discord недоступна, але можна увійти через нього, якщо акаунт уже створено.
         </p>
       )}
       {msg && (

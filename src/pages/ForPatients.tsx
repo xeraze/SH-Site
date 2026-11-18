@@ -16,8 +16,8 @@ export function PatientsPage() {
           <ul className="p-list">
             <li>
               <strong>Чи потрібна реєстрація?</strong> Структуру лікарні, оголошення та корисні посилання можна переглядати без реєстрації. Щоб
-              заповнювати анкети й записуватися на прийом, зареєструйтеся: вкажіть
-              email і пароль, а код підтвердження надійде на пошту.
+              заповнювати анкети й записуватися на прийом, зареєструйтеся (вкажіть
+              email і пароль), а код підтвердження надійде на пошту.
             </li>
             <li>
               <strong>Які анкети є на порталі?</strong> Три типи: заявка на посаду,
@@ -50,7 +50,7 @@ export function PatientsPage() {
       </div>
 
       <div className="p-block">
-        <div className="p-block__head p-block__head--teal">Путівник по порталу</div>
+        <div className="p-block__head p-block__head--teal">Путівник</div>
         <div className="p-block__body">
           <p className="cabinet-profile-note">
             Путівник показує підказки прямо на сторінці, а потрібні кнопки та

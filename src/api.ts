@@ -490,6 +490,8 @@ export interface StaffEmployeeItem {
   age?: number | null;
   bio?: string | null;
   createdAt?: string;
+  discordUsername?: string | null;
+  robloxUsername?: string | null;
 }
 
 export async function fetchStaffEmployees(): Promise<StaffEmployeeItem[]> {

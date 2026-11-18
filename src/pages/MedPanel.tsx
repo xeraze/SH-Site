@@ -169,14 +169,14 @@ const TAB_ICONS: Record<PanelTab, string> = {
 };
 
 const TAB_DESC: Record<Exclude<PanelTab, "overview">, string> = {
-  appeals: "Звернення громадян: скарги, пропозиції та запитання — розгляд, діалог і рішення.",
+  appeals: "Звернення пацієнтів: скарги, пропозиції та запитання - розгляд, діалог та рішення.",
   jobs: "Заявки на посаду: прийняття, відхилення та одразу призначення посад новому працівнику.",
   callcenter: "Записи на прийом: підтвердження, уточнення та діалог із пацієнтом.",
   constructor: "Оголошення лікарні: створення, редагування та публікація.",
   docs: "Документація: нормативні документи, положення та інструкції.",
-  archive: "Архів оголошень і документів: перегляд і повернення.",
+  archive: "Архів оголошень і документів: перегляд, внесення та повернення.",
   roles: "Посади, спеціалізація, ролі (персоналізація) та статус працівників лікарні.",
-  users: "Користувачі: блокування, попередження, IP, пристрої та журнал дій.",
+  users: "Блокування, попередження, IP, пристрої та журнал дій користувачів.",
 };
 
 function StaffStatusButton({
@@ -1389,8 +1389,7 @@ function RolesPanel() {
       <div className="p-block__body">
         <p className="cabinet-profile-note">
           Керування посадами, ролями (персоналізацією), спеціалізацією та
-          статусом — по людині, без email. Системного адміністратора та посаду,
-          що не нижча за вашу, видати не можна.
+          статусом користувачів без email. Посаду, яка вище за вашу або відповідна вашій видати не можна.
         </p>
         <button
           type="button"
@@ -1401,7 +1400,7 @@ function RolesPanel() {
         </button>
 
         <p className="cabinet-profile-note" style={{ marginTop: "1rem" }}>
-          Запрошення для майбутньої реєстрації — якщо людини ще немає на сайті:
+          Запрошення для майбутньої реєстрації (якщо людини ще немає на сайті)
         </p>
         <form onSubmit={onCreateInvite} className="cabinet-roles-form">
           <label className="apps-field">
@@ -1550,8 +1549,8 @@ function RolesPanel() {
                 <table className="panel-users panel-users--static">
                   <thead>
                     <tr>
-                      <th title="Прізвище, ім'я та по батькові. Клік — профіль.">ПІБ</th>
-                      <th title="Посади в лікарні — надають права на сайті.">Посади</th>
+                      <th title="Прізвище, ім'я та по батькові">ПІБ</th>
+                      <th title="Посади в лікарні (надають права на сайті)">Посади</th>
                       <th title="Видимі в профілі мітки (персоналізація). Прав не надають.">
                         Ролі
                       </th>
@@ -1581,6 +1580,8 @@ function RolesPanel() {
                                   avatar: e.avatar,
                                   roles: e.roles,
                                   staffStatus: e.staffStatus,
+                                  discordUsername: e.discordUsername,
+                                  robloxUsername: e.robloxUsername,
                                 })
                               }
                             >
@@ -1648,6 +1649,8 @@ function RolesPanel() {
                         avatar: selected.avatar,
                         roles: selected.roles,
                         staffStatus: selected.staffStatus,
+                        discordUsername: selected.discordUsername,
+                        robloxUsername: selected.robloxUsername,
                       })
                     }
                   >
@@ -1671,9 +1674,8 @@ function RolesPanel() {
                 <section className="staff-manage__section">
                   <h4 className="staff-manage__title">Посади</h4>
                   <p className="cabinet-profile-note">
-                    Посади надають права на сайті. Свою посаду та вищі, а також
-                    системного адміністратора, видати не можна. «Пацієнт» і
-                    «Працівник лікарні» — це статуси, змінюються кнопкою-олівцем
+                    Посади надають права на сайті. Свою посаду та вище за свою видати не можна. «Пацієнт» і
+                    «Працівник лікарні» - це статуси які змінюються кнопкою-олівцем
                     у таблиці.
                   </p>
                   {chipRoles.length > 0 && (
@@ -1704,7 +1706,7 @@ function RolesPanel() {
                   })}
                 </section>
                 <section className="staff-manage__section">
-                  <h4 className="staff-manage__title">Ролі (персоналізація)</h4>
+                  <h4 className="staff-manage__title">Ролі</h4>
                   <p className="cabinet-profile-note">
                     Видима в профілі інформація: структурний підрозділ,
                     адміністрація. Прав не надає.

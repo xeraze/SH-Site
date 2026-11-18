@@ -17,7 +17,7 @@ export const APPLICATION_FORMS: ApplicationForm[] = [
   {
     id: "job_application",
     title: "Заявка на посаду",
-    description: "Подайте заявку, щоб отримати посаду в нашій лікарні. Roblox Username береться з профілю.",
+    description: "Подайте заявку на посаду, щоб стати працівником лікарні.",
     fields: [
       { label: "Ваша спеціалізація за номенклатурою", required: true },
       {
@@ -36,8 +36,8 @@ export const APPLICATION_FORMS: ApplicationForm[] = [
   },
   {
     id: "appeal",
-    title: "Апеляція покарання",
-    description: "Оскаржте покарання, якщо вважаєте його несправедливим. Roblox Username береться з профілю.",
+    title: "Апеляція",
+    description: "Оскаржте покарання, якщо ви з ним не згодні.",
     fields: [
       { label: "Отримане покарання та його причина", multiline: true, required: true },
       { label: "Детальний опис ситуації з вашого боку", multiline: true, required: false },
@@ -46,40 +46,40 @@ export const APPLICATION_FORMS: ApplicationForm[] = [
   },
   {
     id: "player_complaint",
-    title: "Скарга на гравця",
-    description: "Поскаржтеся на порушення правил іншим гравцем. Roblox Username порушника вказуйте в полі нижче; ваш — з профілю.",
+    title: "Скарга",
+    description: "Поскаржтеся на порушення правил іншим гравцем. Roblox Username порушника вказуйте в полі нижче.",
     fields: [
       { label: "Roblox або Discord порушника", placeholder: "@username / ID", required: true },
-      { label: "Яке правило було порушено та коли?", placeholder: "Суть ситуації", multiline: true, required: true },
-      { label: "Наявність доказів", options: ["Так", "Ні"], required: true },
+      { label: "Яке правило було порушено та коли?", placeholder: "Опис ситуації", multiline: true, required: true },
+      { label: "У вас наявні докази?", options: ["Так", "Ні"], required: true },
     ],
   },
   {
     id: "bug_report",
-    title: "Повідомлення про помилку",
+    title: "Репорт",
     description: "Повідомте про помилку або баг, який ви виявили.",
     fields: [
-      { label: "Місце виявлення багу", placeholder: "Discord-сервер чи Roblox-плейс", required: true },
+      { label: "Місце виявлення багу", placeholder: "Discord/Roblox/Site", required: true },
       { label: "Детальний опис проблеми", placeholder: "Як відтворився баг?", multiline: true, required: true },
       { label: "Наявність фото/відео фіксації", options: ["Так", "Ні"], required: true },
     ],
   },
   {
     id: "idea",
-    title: "Ідея / Пропозиція",
-    description: "Поділіться ідеєю або пропозицією щодо проєкту.",
+    title: "Пропозиція",
+    description: "Поділіться пропозицією щодо проєкту.",
     fields: [
-      { label: "Тема пропозиції", placeholder: "Коротка тема ідеї", required: true },
-      { label: "Опис пропозиції", placeholder: "Опишіть ідею максимально детально", multiline: true, required: true },
+      { label: "Тема пропозиції", placeholder: "Коротка тема", required: true },
+      { label: "Опис пропозиції", placeholder: "Розгорнутий опис", multiline: true, required: true },
     ],
   },
   {
     id: "question",
     title: "Запитання",
-    description: "Поставте запитання до дирекції сервера.",
+    description: "Поставте запитання до керівництва лікарні.",
     fields: [
-      { label: "Тема звернення (коротко)", placeholder: "Коротка тема", required: true },
-      { label: "Суть запитання (розгорнуто та з деталями)", multiline: true, required: true },
+      { label: "Тема запитання", placeholder: "Коротка тема", required: true },
+      { label: "Опис запитання", placeholder: "Розгорнутий опис", multiline: true, required: true },
     ],
   },
 ];
