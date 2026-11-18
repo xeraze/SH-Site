@@ -15,12 +15,12 @@ export const PERSONALIZATION_CATEGORIES: PersonalizationCategory[] = [
 ];
 
 export const PERSONALIZATION_ITEMS: PersonalizationItem[] = [
-  { id: "dept_functional", label: "Відділення функціональної діагностики", category: "department" },
+  { id: "dept_functional", label: "Відділення променевої та функціональної діагностики", category: "department" },
   { id: "dept_lab", label: "Клініко-діагностична лабораторія", category: "department" },
   { id: "dept_therapeutic", label: "Терапевтичне відділення №1", category: "department" },
   { id: "dept_therapeutic2", label: "Терапевтичне відділення №2", category: "department" },
   { id: "dept_surgical", label: "Хірургічне відділення", category: "department" },
-  { id: "dept_anesthesia", label: "Відділення анестезіології та інтенсивної терапії", category: "department" },
+  { id: "dept_anesthesia", label: "Відділення анестезіології з ліжками інтенсивної терапії", category: "department" },
   { id: "dept_polyclinic", label: "Поліклінічне відділення", category: "department" },
   { id: "dept_admission", label: "Приймальне відділення", category: "department" },
   { id: "dept_pathomorph", label: "Патоморфологічне відділення", category: "department" },
