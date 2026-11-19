@@ -6,7 +6,7 @@ import {
   clearNotifications,
   fetchAnnouncements,
   fetchDepartmentStaffOnce,
-  fetchMe,
+  fetchMeResult,
   fetchNotifications,
   getToken,
   markNotificationsRead,
@@ -14,6 +14,7 @@ import {
   type NotificationItem,
   type PublicAnnouncement,
 } from "../api";
+import { isSoundMuted, playNotificationSound, setSoundMuted } from "../sound";
 import {
   APPOINTMENT_REVIEW_ROLES_UI,
   ASSIGNER_ROLES_UI,
@@ -117,13 +118,25 @@ function stripHtml(html: string): string {
 function NotificationBell() {
   const [items, setItems] = useState<NotificationItem[]>([]);
   const [open, setOpen] = useState(false);
+  const [muted, setMuted] = useState(isSoundMuted());
   const ref = useRef<HTMLDivElement>(null);
+  const seenRef = useRef<Set<string> | null>(null);
 
   const unread = items.filter((n) => !n.read).length;
 
   const load = useCallback(async () => {
     if (!getToken()) return;
-    setItems(await fetchNotifications());
+    const list = await fetchNotifications();
+    if (!list) return;
+    const prev = seenRef.current;
+    if (prev) {
+      const hasNew = list.some((n) => !n.read && !prev.has(n.id));
+      if (hasNew) playNotificationSound();
+    } else {
+      seenRef.current = new Set();
+    }
+    seenRef.current = new Set(list.map((n) => n.id));
+    setItems(list);
   }, []);
 
   useEffect(() => {
@@ -169,19 +182,35 @@ function NotificationBell() {
         <div className="site-header__bell-panel">
           <div className="site-header__bell-head">
             <span>Сповіщення</span>
-            {items.length > 0 && (
+            <div className="site-header__bell-actions">
               <button
                 type="button"
                 className="site-header__bell-clear"
-                aria-label="Очистити сповіщення"
-                title="Очистити сповіщення"
+                aria-label={muted ? "Увімкнути звук сповіщень" : "Вимкнути звук сповіщень"}
+                title={muted ? "Увімкнути звук сповіщень" : "Вимкнути звук сповіщень"}
                 onClick={() => {
-                  void clearNotifications().then(() => setItems([]));
+                  const next = !muted;
+                  setMuted(next);
+                  setSoundMuted(next);
+                  if (!next) playNotificationSound();
                 }}
               >
-                <Icon icon="mdi:delete-outline" width={16} height={16} />
+                <Icon icon={muted ? "mdi:volume-off" : "mdi:volume-high"} width={16} height={16} />
               </button>
-            )}
+              {items.length > 0 && (
+                <button
+                  type="button"
+                  className="site-header__bell-clear"
+                  aria-label="Очистити сповіщення"
+                  title="Очистити сповіщення"
+                  onClick={() => {
+                    void clearNotifications().then(() => setItems([]));
+                  }}
+                >
+                  <Icon icon="mdi:delete-outline" width={16} height={16} />
+                </button>
+              )}
+            </div>
           </div>
           {items.length === 0 ? (
             <p className="site-header__bell-empty">Поки що немає сповіщень.</p>
@@ -233,8 +262,17 @@ export function SiteHeader() {
 
   useEffect(() => {
     if (!getToken()) return;
-    void (async () => {
-      const me = await fetchMe();
+    let cancelled = false;
+    let attempt = 0;
+    const run = async () => {
+      const res = await fetchMeResult();
+      if (cancelled) return;
+      if (!res.ok) {
+        attempt += 1;
+        if (attempt < 4) window.setTimeout(() => void run(), 2000 * attempt);
+        return;
+      }
+      const me = res.user;
       if (!me) {
         setCanPanel(false);
         return;
@@ -245,7 +283,11 @@ export function SiteHeader() {
           hasAnyRole(me.roles, MANAGE_ANN_ROLES_UI) ||
           hasAnyRole(me.roles, APPOINTMENT_REVIEW_ROLES_UI),
       );
-    })();
+    };
+    void run();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const results = useMemo(() => {

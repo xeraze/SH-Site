@@ -4,7 +4,7 @@ import {
   createArchiveCode,
   deleteAnnouncement,
   fetchArchive,
-  fetchMe,
+  fetchMeResult,
   getToken,
   loginUrl,
   redeemArchiveCode,
@@ -27,6 +27,7 @@ export function ArchivePage() {
   const [codeFor, setCodeFor] = useState<string | null>(null);
   const [isSysadmin, setIsSysadmin] = useState(false);
   const [clearBusy, setClearBusy] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     const hasToken = !!getToken();
@@ -35,7 +36,14 @@ export function ArchivePage() {
       setLoading(false);
       return;
     }
-    const me = await fetchMe();
+    const res = await fetchMeResult();
+    if (!res.ok) {
+      setLoadError(res.error);
+      setLoading(false);
+      return;
+    }
+    setLoadError(null);
+    const me = res.user;
     const isStaff = !!me && me.roles.some((r) => STAFF_ROLES_UI.includes(r));
     setIsSysadmin(!!me && me.roles.includes("sysadmin"));
     setStaff(isStaff);
@@ -119,6 +127,23 @@ export function ArchivePage() {
       ) : loading ? (
         <div className="p-block">
           <div className="p-block__body">Завантаження...</div>
+        </div>
+      ) : loadError ? (
+        <div className="p-block">
+          <div className="p-block__head">Сервер недоступний</div>
+          <div className="p-block__body">
+            <p className="cabinet-profile-note">
+              Не вдалося зв'язатися з сервером. Ваш вхід збережено - спробуйте
+              ще раз.
+            </p>
+            <button type="button" className="portal-cta" onClick={() => {
+              setLoading(true);
+              setLoadError(null);
+              void load();
+            }}>
+              Спробувати ще раз
+            </button>
+          </div>
         </div>
       ) : staff ? (
         <>

@@ -3598,16 +3598,27 @@ function ArchivePanel() {
 export function PanelPage() {
   const [user, setUser] = useState<PublicUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [tab, setTab] = useState<PanelTab>("overview");
   const [focusApp, setFocusApp] = useState<string | null>(null);
 
-  useEffect(() => {
-    void (async () => {
-      const me = await fetchMe();
-      setUser(me);
+  const load = useCallback(async () => {
+    setLoading(true);
+    setLoadError(null);
+    const res = await fetchMeResult();
+    if (!res.ok) {
+      setLoadError(res.error);
+      setUser(null);
       setLoading(false);
-    })();
+      return;
+    }
+    setUser(res.user);
+    setLoading(false);
   }, []);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
 
   const isReviewer = user ? hasAnyRole(user.roles, REVIEWER_ROLES_UI) : false;
   const isAssigner = user ? hasAnyRole(user.roles, ASSIGNER_ROLES_UI) : false;
@@ -3650,6 +3661,19 @@ export function PanelPage() {
       {loading ? (
         <div className="p-block">
           <div className="p-block__body">Завантаження...</div>
+        </div>
+      ) : loadError ? (
+        <div className="p-block">
+          <div className="p-block__head">Сервер недоступний</div>
+          <div className="p-block__body">
+            <p className="cabinet-profile-note">
+              Не вдалося зв'язатися з сервером. Ваш вхід збережено - спробуйте
+              ще раз.
+            </p>
+            <button type="button" className="portal-cta" onClick={() => void load()}>
+              Спробувати ще раз
+            </button>
+          </div>
         </div>
       ) : !user ? (
         <div className="p-block">

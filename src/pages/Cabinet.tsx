@@ -13,7 +13,7 @@ import {
   fetchAppointments,
   fetchApplications,
   fetchAppointmentMessages,
-  fetchMe,
+  fetchMeResult,
   fetchMessages,
   fetchSessions,
   fetchSettings,
@@ -374,6 +374,7 @@ function AuthBox({
 export function CabinetPage() {
   const [user, setUser] = useState<PublicUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [applications, setApplications] = useState<ApplicationItem[]>([]);
   const [authError, setAuthError] = useState<string | null>(null);
   const [inviteToken, setInviteToken] = useState<string | null>(null);
@@ -394,7 +395,14 @@ export function CabinetPage() {
   }, []);
 
   const loadUser = useCallback(async () => {
-    const me = await fetchMe();
+    const res = await fetchMeResult();
+    if (!res.ok) {
+      setLoadError(res.error);
+      setLoading(false);
+      return;
+    }
+    setLoadError(null);
+    const me = res.user;
     setUser(me);
     if (me) {
       if (me.needsProfile && window.location.pathname !== hrefFor("/kabinet")) {
@@ -557,7 +565,7 @@ export function CabinetPage() {
 
   return (
     <PortalLayout title="Особистий кабінет">
-      {!user && (
+      {!user && !loadError && (
         <p className="p-lead">
           Увійдіть або зареєструйтеся, щоб подавати заповнені анкети та відстежувати їх статус, а також
           керувати своїми персональними даними.
@@ -610,6 +618,27 @@ export function CabinetPage() {
         <div className="p-block">
           <div className="p-block__body">Завантаження...</div>
         </div>
+      ) : loadError ? (
+        <div className="p-block">
+          <div className="p-block__head">Сервер недоступний</div>
+          <div className="p-block__body">
+            <p className="cabinet-profile-note">
+              Не вдалося зв'язатися з сервером. Ваш вхід збережено - спробуйте
+              ще раз.
+            </p>
+            <button
+              type="button"
+              className="portal-cta"
+              onClick={() => {
+                setLoading(true);
+                setLoadError(null);
+                void loadUser();
+              }}
+            >
+              Спробувати ще раз
+            </button>
+          </div>
+        </div>
       ) : !user ? (
         <AuthBox
           inviteToken={inviteToken}
@@ -639,7 +668,7 @@ export function CabinetPage() {
           )}
           {user.blockedUntil && new Date(user.blockedUntil + "Z") > new Date() && (
             <div className="p-block cabinet-blocked">
-              <div className="p-block__head">Тимчасова блокування</div>
+              <div className="p-block__head">Тимчасове блокування</div>
               <div className="p-block__body">
                 Акаунт заблоковано до{" "}
                 {new Date(user.blockedUntil + "Z").toLocaleString("uk-UA")}. Деякі

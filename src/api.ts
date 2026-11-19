@@ -196,13 +196,58 @@ export interface InvitesResult {
   assignable: string[];
 }
 
+const TOKEN_COOKIE = "sh_token";
+
+function readCookie(name: string): string | null {
+  const prefix = `${name}=`;
+  const part = document.cookie.split("; ").find((c) => c.startsWith(prefix));
+  if (!part) return null;
+  try {
+    return decodeURIComponent(part.slice(prefix.length));
+  } catch {
+    return null;
+  }
+}
+
+function writeCookie(name: string, value: string | null, maxAge: number): void {
+  try {
+    document.cookie = value
+      ? `${name}=${encodeURIComponent(value)}; path=/; max-age=${maxAge}; samesite=lax`
+      : `${name}=; path=/; max-age=0; samesite=lax`;
+  } catch {
+    return;
+  }
+}
+
 export function getToken(): string | null {
-  return localStorage.getItem(TOKEN_KEY);
+  let local: string | null = null;
+  try {
+    local = localStorage.getItem(TOKEN_KEY);
+  } catch {
+    local = null;
+  }
+  if (local) return local;
+  const fromCookie = readCookie(TOKEN_COOKIE);
+  if (fromCookie) {
+    try {
+      localStorage.setItem(TOKEN_KEY, fromCookie);
+    } catch {
+      return fromCookie;
+    }
+    return fromCookie;
+  }
+  return null;
 }
 
 export function setToken(token: string | null): void {
-  if (token) localStorage.setItem(TOKEN_KEY, token);
-  else localStorage.removeItem(TOKEN_KEY);
+  try {
+    if (token) localStorage.setItem(TOKEN_KEY, token);
+    else localStorage.removeItem(TOKEN_KEY);
+  } catch {
+    writeCookie(TOKEN_COOKIE, token, token ? 60 * 60 * 24 * 30 : 0);
+    return;
+  }
+  writeCookie(TOKEN_COOKIE, token, token ? 60 * 60 * 24 * 30 : 0);
 }
 
 export function loginUrl(extra?: string): string {
@@ -218,6 +263,7 @@ export function discordLoginUrl(extra?: string): string {
 async function apiFetch<T>(
   path: string,
   options: { method?: string; body?: unknown } = {},
+  attempt = 0,
 ): Promise<
   | { ok: true; data: T }
   | { ok: false; status: number; error: string; data: Partial<T> }
@@ -243,14 +289,28 @@ async function apiFetch<T>(
     }
     return { ok: true, data };
   } catch {
+    const method = options.method ?? "GET";
+    if (method === "GET" && attempt < 2) {
+      await new Promise((resolve) => setTimeout(resolve, 700 * (attempt + 1)));
+      return apiFetch(path, options, attempt + 1);
+    }
     return { ok: false, status: 0, error: "Сервер недоступний", data: {} as Partial<T> };
   }
 }
 
-export async function fetchMe(): Promise<PublicUser | null> {
+export type MeResult =
+  | { ok: true; user: PublicUser | null }
+  | { ok: false; error: string; status: number };
+
+export async function fetchMeResult(): Promise<MeResult> {
   const res = await apiFetch<{ user: PublicUser | null }>("/api/me");
-  if (!res.ok) return null;
-  return res.data.user;
+  if (res.ok) return { ok: true, user: res.data.user ?? null };
+  return { ok: false, error: res.error, status: res.status };
+}
+
+export async function fetchMe(): Promise<PublicUser | null> {
+  const res = await fetchMeResult();
+  return res.ok ? res.user : null;
 }
 
 export async function saveProfile(input: {
@@ -966,9 +1026,9 @@ export async function deleteApplicationMessage(
   return { ok: true };
 }
 
-export async function fetchNotifications(): Promise<NotificationItem[]> {
+export async function fetchNotifications(): Promise<NotificationItem[] | null> {
   const res = await apiFetch<{ notifications: NotificationItem[] }>("/api/notifications");
-  if (!res.ok) return [];
+  if (!res.ok) return null;
   return res.data.notifications;
 }
 

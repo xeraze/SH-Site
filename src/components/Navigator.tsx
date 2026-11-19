@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { Icon } from "@iconify/react";
-import { fetchMe, getToken } from "../api";
+import { fetchMeResult, getToken } from "../api";
 import { ROLE_LABELS_UI } from "../data/status";
 import { RESTART_EVENT } from "./tourRestart";
 import "./Navigator.css";
@@ -77,7 +77,7 @@ const TOUR_STEPS: Record<TourKind, TourStep[]> = {
       icon: "mdi:heart-outline",
       target: TAB_PATIENTS,
       title: "Для пацієнтів",
-      body: "Вартість послуг, НСЗУ, страхування та відповіді на часті питання. Також тут є кнопка «Пройти путівник ще раз», щоб повторити його, коли захочете.",
+      body: "НСЗУ та відповіді на часті питання. Також тут є кнопка «Пройти путівник ще раз», щоб повторити його, коли захочете.",
     },
   ],
   staff: [],
@@ -163,7 +163,9 @@ export function OnboardingTour() {
       apply([]);
       return;
     }
-    void fetchMe().then((me) => apply(me?.roles ?? []));
+    void fetchMeResult().then((res) => {
+      if (res.ok) apply(res.user?.roles ?? []);
+    });
   }, []);
 
   useEffect(() => {

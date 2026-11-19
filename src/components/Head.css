@@ -413,6 +413,12 @@
   background: rgba(255, 255, 255, 0.15);
 }
 
+.site-header__bell-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .site-header__bell-empty {
   margin: 0;
   padding: 12px;

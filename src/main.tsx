@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import "./styles/base.css";
 import App from "./App.tsx";
+import { installSoundUnlock } from "./sound";
 
 const deepParams = new URLSearchParams(window.location.search);
 const deepPath = deepParams.get("p");
@@ -29,3 +30,5 @@ if ("serviceWorker" in navigator) {
     .register(`${import.meta.env.BASE_URL}sw.js`)
     .catch(() => {});
 }
+
+installSoundUnlock();
