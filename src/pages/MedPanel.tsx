@@ -1173,7 +1173,7 @@ function RolesPanel() {
   const [employees, setEmployees] = useState<StaffEmployeeItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
-  const [statusF, setStatusF] = useState("");
+  const [statusF, setStatusF] = useState("active");
   const [posF, setPosF] = useState("");
   const [specF, setSpecF] = useState("");
   const [tableOpen, setTableOpen] = useState(false);

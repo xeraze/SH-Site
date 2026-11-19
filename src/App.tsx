@@ -87,6 +87,7 @@ function App() {
             path="/umovy-ta-konfidentsiynist"
             element={<Navigate to="/umovy-korystuvannya" replace />}
           />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
       <Footer />
