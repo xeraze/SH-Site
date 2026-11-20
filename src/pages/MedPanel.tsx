@@ -1397,7 +1397,7 @@ function RolesPanel() {
           className="portal-cta"
           onClick={() => setTableOpen(true)}
         >
-          Список працівників ({loading ? "..." : employees.length})
+          Список працівників
         </button>
 
         <p className="cabinet-profile-note" style={{ marginTop: "1rem" }}>
